@@ -318,7 +318,7 @@ end
 function set_player_into_suitable_seat(ent)
     ls_log("Setting player into suitable seat of entity " .. ent)
     local driver = VEHICLE.GET_PED_IN_VEHICLE_SEAT(ent, -1)
-    if not is_ped_player(driver) or driver == 0 then
+    if not PED.IS_PED_A_PLAYER(driver) or driver == 0 then
         if driver ~= 0 then
             entities.delete(driver)
         end
@@ -409,7 +409,7 @@ function get_random_ped()
     npcs = {}
     valid = 0
     for k,p in pairs(peds) do
-        if p ~= nil and not is_ped_player(p) then
+        if p ~= nil and not PED.IS_PED_A_PLAYER(p) then
             table.insert(npcs, p)
             valid = valid + 1
         end
@@ -1037,10 +1037,6 @@ menu.toggle(weapons_root, "Grapple gun", {"grapplegun"}, "fun stuff", function(o
 end)
 
 -- PEDS
-function is_ped_player(ped)
-    -- whatever
-    return PED.IS_PED_A_PLAYER(ped)
-end
 
 peds_thread = util.create_thread(function (thr)
     while true do
@@ -1049,7 +1045,7 @@ peds_thread = util.create_thread(function (thr)
             all_peds = entities.get_all_peds_as_handles()
             for k,ped in pairs(all_peds) do
                 if kill_aura then
-                    if (kill_aura_peds and not is_ped_player(ped)) or (kill_aura_players and is_ped_player(ped)) then
+                    if (kill_aura_peds and not PED.IS_PED_A_PLAYER(ped)) or (kill_aura_players and PED.IS_PED_A_PLAYER(ped)) then
                         local pid = NETWORK.NETWORK_GET_PLAYER_INDEX_FROM_PED(v)
                         local hdl = pid_to_handle(pid)
                         if (kill_aura_friends and not NETWORK.NETWORK_IS_FRIEND(hdl)) or not kill_aura_friends then
@@ -1061,7 +1057,7 @@ peds_thread = util.create_thread(function (thr)
                         end
                     end
                 end
-                if not is_ped_player(ped) then
+                if not PED.IS_PED_A_PLAYER(ped) then
                     if peds_ignore then
                         if not PED.GET_PED_CONFIG_FLAG(ped, 17, true) then
                             PED.SET_BLOCKING_OF_NON_TEMPORARY_EVENTS(ped, true)
@@ -1227,7 +1223,7 @@ function task_handler(type)
     all_peds = entities.get_all_peds_as_handles()
     player_ped = PLAYER.PLAYER_PED_ID()
     for k,ped in pairs(all_peds) do
-        if not is_ped_player(ped) then
+        if not PED.IS_PED_A_PLAYER(ped)) then
             if type == "flop" then
                 TASK.TASK_SKY_DIVE(ped)
             elseif type == "cover" then
@@ -1489,8 +1485,8 @@ vehicles_thread = util.create_thread(function (thr)
                 end
                 local driver = VEHICLE.GET_PED_IN_VEHICLE_SEAT(veh, -1)
                 -- FOR THINGS THAT SHOULD NOT WORK ON CARS WITH PLAYERS DRIVING THEM
-                if player_cur_car ~= veh and not (is_ped_player(driver) or driver == 0) then
-                    if not is_ped_player(driver) or driver == 0 then
+                if player_cur_car ~= veh and not (PED.IS_PED_A_PLAYER(driver) or driver == 0) then
+                    if not PED.IS_PED_A_PLAYER(driver) or driver == 0 then
                         if reap then
                             request_control_of_entity(veh)
                         end
@@ -1590,7 +1586,7 @@ menu.action(world_root, "Super cleanse", {"supercleanse"}, "Uses stand API to de
         ct = ct + 1
     end
     for k,ent in pairs(entities.get_all_peds_as_handles()) do
-        if not is_ped_player(ent) then
+        if not PED.IS_PED_A_PLAYER(ent) then
             entities.delete(ent)
         end
         ct = ct + 1
@@ -2788,7 +2784,7 @@ function set_up_player_actions(pid)
         local player_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         local all_peds = entities.get_all_peds_as_handles()
         for k, ped in pairs(all_peds) do
-            if not is_ped_player(ped) then
+            if not PED.IS_PED_A_PLAYER(ped) then
                 request_control_of_entity(ped)
                 PED.SET_PED_AS_COP(ped, true)
                 PED.SET_PED_FLEE_ATTRIBUTES(ped, 0, false)
@@ -3377,8 +3373,8 @@ while true do
         if PED.IS_PED_SHOOTING(players.user_ped()) then
             if ENTITY.IS_ENTITY_A_VEHICLE(ent) then
                 local driver = VEHICLE.GET_PED_IN_VEHICLE_SEAT(ent, -1)
-                if driver == 0 or not is_ped_player(driver) then
-                    if not is_ped_player(driver) then
+                if driver == 0 or not PED.IS_PED_A_PLAYER(driver) then
+                    if not PED.IS_PED_A_PLAYER(driver) then
                         entities.delete(driver)
                     end
                     local hash = 0x9C9EFFD8
