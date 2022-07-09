@@ -7,4 +7,5 @@ I never ran that project nor had anything to do with it. While LanceScript has a
 Please do not confuse my work with unofficial continuations. I'm back now, so I will be the one maintaining this moving forward.  
 
 ## Install
-Drag everything except readme.md and license.txt into your Stand's lua scripts folder. Done. 
+Download the repo as zip and drag everything from it, except readme.md and license.txt, into your Stand's lua scripts folder. Done.  
+Bug reports and suggestions should go into the Discord (there is a button in the script menu to access it).
