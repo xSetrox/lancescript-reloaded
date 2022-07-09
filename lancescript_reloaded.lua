@@ -82,8 +82,10 @@ combat_root = menu.list(self_root, "My combat/weapons", {"lancescriptcombat"}, "
 -- END SELF SUBSECTIONS
 -- BEGIN ONLINE SUBSECTIONS
 online_root = menu.list(menu.my_root(), "Online", {"lancescriptonline"}, "Online")
+
+local players_shortcut_command = menu.ref_by_path('Players', 37)
 menu.action(menu.my_root(), "Players shortcut", {}, "Quickly opens session players list, for convenience", function(on_click)
-    menu.trigger_commands("playerlist")
+    menu.trigger_command(players_shortcut_command)
 end)
 ap_root = menu.list(online_root, "All players", {"lancescriptonline"}, "Players")
 apnice_root = menu.list(ap_root, "Nice", {"apnice"}, "")
@@ -209,28 +211,12 @@ blue = to_rgb(0.0,0.0,1.0,1.0)
 
 
 -- RAYCAST SHIT
--- credit to nowiry
-function rotation_to_direction(rotation) 
-    local adjusted_rotation = 
-    { 
-        x = (math.pi / 180) * rotation.x, 
-        y = (math.pi / 180) * rotation.y, 
-        z = (math.pi / 180) * rotation.z 
-    }
-    local direction = 
-    {
-        x = -math.sin(adjusted_rotation.z) * math.abs(math.cos(adjusted_rotation.x)), 
-        y =  math.cos(adjusted_rotation.z) * math.abs(math.cos(adjusted_rotation.x)), 
-        z =  math.sin(adjusted_rotation.x)
-    }
-    return direction
-end
 
 -- credits to nowiry
 function get_offset_from_gameplay_camera(distance)
     local cam_rot = CAM.GET_GAMEPLAY_CAM_ROT(0)
     local cam_pos = CAM.GET_GAMEPLAY_CAM_COORD()
-    local direction = rotation_to_direction(cam_rot)
+    local direction = v3.toDir(cam_rot)
     local destination = 
     { 
         x = cam_pos.x + direction.x * distance, 
@@ -244,7 +230,7 @@ end
 function get_offset_from_camera(distance, camera)
     local cam_rot = CAM.GET_CAM_ROT(camera, 0)
     local cam_pos = CAM.GET_CAM_COORD(camera)
-    local direction = rotation_to_direction(cam_rot)
+    local direction = v3.toDir(cam_rot)
     local destination = 
     { 
         x = cam_pos.x + direction.x * distance, 
@@ -260,7 +246,7 @@ function raycast_gameplay_cam(flag, distance)
     local ptr1, ptr2, ptr3, ptr4 = memory.alloc(), memory.alloc(), memory.alloc(), memory.alloc()
     local cam_rot = CAM.GET_GAMEPLAY_CAM_ROT(0)
     local cam_pos = CAM.GET_GAMEPLAY_CAM_COORD()
-    local direction = rotation_to_direction(cam_rot)
+    local direction = v3.toDir(cam_rot)
     local destination = 
     { 
         x = cam_pos.x + direction.x * distance, 
@@ -297,7 +283,7 @@ function raycast_cam(flag, distance, cam)
     local ptr1, ptr2, ptr3, ptr4 = memory.alloc(), memory.alloc(), memory.alloc(), memory.alloc()
     local cam_rot = CAM.GET_CAM_ROT(cam, 0)
     local cam_pos = CAM.GET_CAM_COORD(cam)
-    local direction = rotation_to_direction(cam_rot)
+    local direction = v3.toDir(cam_rot)
     local destination = 
     { 
         x = cam_pos.x + direction.x * distance, 
@@ -515,12 +501,11 @@ end
 ped_flags = {}
 
 walkonwater = false
+local ls_driveonair
 menu.toggle(self_root, "Walk on water", {"walkonwater"}, "no blasphemy permitted! this will not function when you are inside a vehicle.", function(on)
+    walkonwater = on
     if on then
-        walkonwater = true
-        menu.trigger_commands("driveonair off")
-    else
-        walkonwater = false
+        menu.set_value(ls_driveonair, false)
     end
 end)
 
@@ -543,9 +528,10 @@ menu.toggle(self_root, "Burning man", {"burningman"}, "Walk da fire (turn off al
     ped_flags[430] = on
     if on then
         FIRE.START_ENTITY_FIRE(players.user_ped())
-        menu.trigger_commands("demigodmode on")
+        ENTITY.SET_ENTITY_PROOFS(players.user_ped(), false, true, false, false, false, false, 0, false) -- fire proof
     else
         FIRE.STOP_ENTITY_FIRE(players.user_ped())
+        ENTITY.SET_ENTITY_PROOFS(players.user_ped(), false, false, false, false, false, false, 0, false)
     end
 end)
 
@@ -556,6 +542,7 @@ my_vehicle_movement_root = menu.list(my_vehicle_root, "Movement", {"myvehmovemen
 speedometer_plate_root = menu.list(my_vehicle_root, "Speedometer plate", {"lancescriptmyvehicle"}, "Lets you do things to your active vehicle")
 mph_plate = false
 menu.toggle(speedometer_plate_root, "Speedometer plate", {"speedplate"}, "Sets your plate to your speed, constantly.", function(on)
+    mph_plate = on
     if on then
         if player_cur_car ~= 0 then
             original_plate = VEHICLE.GET_VEHICLE_NUMBER_PLATE_TEXT(player_cur_car)
@@ -563,7 +550,6 @@ menu.toggle(speedometer_plate_root, "Speedometer plate", {"speedplate"}, "Sets y
             util.toast("You were not in a vehicle when starting this. You won\'t be able to revert plate text.")
             original_plate = "LANCE"
         end
-        mph_plate = true
     else
         if player_cur_car ~= 0 then
             if original_plate == nil then
@@ -571,31 +557,25 @@ menu.toggle(speedometer_plate_root, "Speedometer plate", {"speedplate"}, "Sets y
             end
             VEHICLE.SET_VEHICLE_NUMBER_PLATE_TEXT(player_cur_car, original_plate)
         end
-        mph_plate = false
     end
 end)
 
 mph_unit = "kph"
 menu.toggle(speedometer_plate_root, "Use MPH for speedometer plate", {"usemph"}, "Toggle off if you aren\'t American.", function(on)
-    if on then
-        mph_unit = "mph"
-    else
-        mph_unit = "kph"
-    end
-end, false)
+    mph_unit = if on then "mph" else "kph"
+end)
 
 -- BEGIN MOVEMENT ROOT
 dow_block = 0
 driveonwater = false
-menu.toggle(my_vehicle_movement_root, "Drive on water", {"driveonwater"}, "why does everyone need this feature!!!!!!!!", function(on)
+local ls_driveonwater = menu.toggle(my_vehicle_movement_root, "Drive on water", {"driveonwater"}, "why does everyone need this feature!!!!!!!!", function(on)
+    driveonwater = on
     if on then
-        driveonwater = true
         if driveonair then
-            menu.trigger_commands("driveonair off")
+            menu.set_value(ls_driveonair, false)
             util.toast("Drive on air has been turned OFF automatically to prevent issues.")
         end
     else
-        driveonwater = false
         if not driveonair and not walkonwater then
             ENTITY.SET_ENTITY_COORDS_NO_OFFSET(dow_block, 0, 0, 0, false, false, false)
         end
@@ -604,18 +584,16 @@ end)
 
 doa_ht = 0
 driveonair = false
-menu.toggle(my_vehicle_movement_root, "Drive on air", {"driveonair"}, "yes", function(on)
+ls_driveonair = menu.toggle(my_vehicle_movement_root, "Drive on air", {"driveonair"}, "yes", function(on)
+    driveonair = on
     if on then
         local pos = ENTITY.GET_ENTITY_COORDS(players.user_ped(), true)
         doa_ht = pos['z']
-        driveonair = true
         util.toast("Use space and ctrl to fine-tune your driving height!")
         if driveonwater then
-            menu.trigger_commands("driveonwater off")
+            menu.set_value(ls_driveonwater, false)
             util.toast("Drive on water has been turned OFF automatically to prevent issues.")
         end
-    else
-        driveonair = false
     end
 end)
 
@@ -684,11 +662,11 @@ v_f_previous_car = 0
 fly_speed = 10
 v_fly = false
 v_f_plane = 0
-menu.toggle(my_vehicle_movement_root, "Vehicle fly", {"vehiclefly"}, "Makes your vehicle fly. Flies just like a plane.. suspicious really.", function(on)
+local ls_vehiclefly ls_vehiclefly = menu.toggle(my_vehicle_movement_root, "Vehicle fly", {"vehiclefly"}, "Makes your vehicle fly. Flies just like a plane.. suspicious really.", function(on)
     if on then
         if player_cur_car == 0 then
             util.toast("You are not in a car. Enter a car before enabling this.")
-            menu.trigger_commands("vehiclefly off")
+            menu.set_value(ls_vehiclefly, false)
         else
             v_fly = true
             v_f_previous_car = player_cur_car
@@ -812,29 +790,24 @@ weapons_root = menu.list(combat_root, "Special weapons", {"lancescriptspecialwea
 
 kill_aura = false
 menu.toggle(kill_auraroot, "Kill aura", {"killaura"}, "Kills anyone too close to you. Exactly like hacked Minecraft clients.", function(on)
-    if on then
-        mod_uses("ped", 1)
-        kill_aura = true
-    else
-        mod_uses("ped", -1)
-        kill_aura = false
-    end
-end, false)
+    kill_aura = on
+    mod_uses("ped", if on then 1 else -1)
+end)
 
 kill_aura_peds = false
 menu.toggle(kill_auraroot, "Kill peds", {"killaurapeds"}, "", function(on)
     kill_aura_peds = on
-end, false)
+end)
 
 kill_aura_players = false
 menu.toggle(kill_auraroot, "Kill players", {"killauraplayers"}, "", function(on)
     kill_aura_players = on
-end, false)
+end)
 
 kill_aura_friends = false
 menu.toggle(kill_auraroot, "Target friends", {"killaurafriends"}, "", function(on)
     kill_aura_friends= on
-end, false)
+end)
 
 
 kill_aura_dist = 20
@@ -849,7 +822,7 @@ entgun = false
 shootent = -422877666
 menu.toggle(entity_gun, "Entity gun", {"entgun"}, "Shoot them entities", function(on)
     entgun = on
-end, false)
+end)
 
 menu.action(entity_gun, "Dildo (default)", {"shootentdildo"}, "Click to choose this entity to fire", function(on_click)
     shootent = -422877666
@@ -869,7 +842,7 @@ end)
 entgungrav = false
 menu.toggle(entity_gun, "Entity gun gravity", {"entgungravity"}, "", function(on)
     entgungrav = on
-end, false)
+end)
 
 
 menu.action(entity_gun, "Custom obj model", {"customentgunmodel"}, "Input a custom model to shoot. The model name, not the hash.", function(on_click)
@@ -1011,53 +984,57 @@ menu.slider(silent_aimbotroot, "Damage override amount", {"saimbotdamageoverride
 end)
 --
 
-rainbow_tint = false
-menu.toggle(weapons_root, "Rainbow weapon tint", {"rainbowtint"}, "boogie", function(on)
-    plyr = players.user_ped()
-    if on then
-        local last_tint = WEAPON.GET_PED_WEAPON_TINT_INDEX(players.user_ped(), WEAPON.GET_SELECTED_PED_WEAPON(players.user_ped()))
-        rainbow_tint = true
-    else
-        rainbow_tint = false
-        WEAPON.SET_PED_WEAPON_TINT_INDEX(players.user_ped(),WEAPON.GET_SELECTED_PED_WEAPON(players.user_ped()), last_tint)
+local start_tint
+local cur_tint
+menu.toggle_loop(weapons_root, "Rainbow weapon tint", {"rainbowtint"}, "boogie", function()
+    local plyr = players.user_ped()
+
+    if start_tint == nil then
+        start_tint = WEAPON.GET_PED_WEAPON_TINT_INDEX(plyr, WEAPON.GET_SELECTED_PED_WEAPON(plyr))
+        cur_tint = start_tint
     end
-end, false)
+    cur_tint = if cur_tint == 8 then 0 else cur_tint + 1
+    WEAPON.SET_PED_WEAPON_TINT_INDEX(plyr,WEAPON.GET_SELECTED_PED_WEAPON(plyr), cur_tint)
+
+    util.yield(50)
+end, function()
+    WEAPON.SET_PED_WEAPON_TINT_INDEX(players.user_ped(),WEAPON.GET_SELECTED_PED_WEAPON(players.user_ped()), start_tint)
+    start_tint = nil
+end)
 
 menu.toggle(weapons_root, "Invisible weapons", {"invisguns"}, "Makes your weapons invisible. Might be local only. You need to retoggle when switching weapons.", function(on)
     local plyr = players.user_ped()
-    WEAPON.SET_PED_CURRENT_WEAPON_VISIBLE(plyr, not on, false, false, false) 
-end, false)
+    WEAPON.SET_PED_CURRENT_WEAPON_VISIBLE(plyr, not on, false, false, false)
+end)
 
 aim_info = false
 menu.toggle(weapons_root, "Aim info", {"aiminfo"}, "Displays info of the entity you\'re aiming at", function(on)
     aim_info = on
-end, false)
+end)
 
 gun_stealer = false
 menu.toggle(weapons_root, "Car stealer gun", {"gunstealer"}, "Shoot a vehicle to steal it. If it is a car with a player driver, it will teleport you into the next available seat.", function(on)
     gun_stealer = on
-end, false)
+end)
 
 paintball = false
 menu.toggle(weapons_root, "Paintball", {"paintball"}, "Shoot a vehicle and it will turn into a random color! You may have to shoot a few times if in online due to entity ownership.", function(on)
     paintball = on
-end, false)
+end)
 
 drivergun = false
 menu.toggle(weapons_root, "NPC driver gun", {"drivergun"}, "Shoot a vehicle to insert an NPC driver that will drive the vehicle to a random area. You may have to shoot a few times if in online due to entity ownership.", function(on)
     drivergun = on
-end, false)
+end)
 
 grapplegun = false
 menu.toggle(weapons_root, "Grapple gun", {"grapplegun"}, "fun stuff", function(on)
+    grapplegun = on
     if on then
-        grapplegun = true
         util.toast("Grapple gun is now active! Shoot somewhere with a pistol. Press R while grappling to stop grappling.")
-        menu.trigger_commands("getgunspistol")
-    else
-        grapplegun = false
+        WEAPON.GIVE_WEAPON_TO_PED(players.user_ped(), util.joaat('weapon_pistol'), 9999, false, false)
     end
-end, false)
+end)
 
 -- PEDS
 function is_ped_player(ped)
@@ -1236,14 +1213,14 @@ end)
 
 
 allpeds_gun = 0
-menu.click_slider(peds_root, "Gun to give to all peds", {"givepedswep"}, "0 = none\n1 = pistol\n2 = combat pdw\n3 = shotgun\n4 = Knife\n5 = minigun", 0, 5, 0, 1, function(s)
+local ls_givepedswep = menu.click_slider(peds_root, "Gun to give to all peds", {"givepedswep"}, "0 = none\n1 = pistol\n2 = combat pdw\n3 = shotgun\n4 = Knife\n5 = minigun", 0, 5, 0, 1, function(s)
     if s == 0 then
         allpeds_gun = 0
     else
         allpeds_gun = good_guns[s]
     end
 end)
-menu.trigger_commands("givepedswep 0")
+menu.set_value(ls_givepedswep, 0)
 
 function task_handler(type)
     -- whatever, just get it once this frame
@@ -1292,99 +1269,59 @@ end)
 
 php_bars = false
 menu.toggle(ped_extras, "HP bars", {"pedhpbars"}, "Draw health bars on NPC\'s.", function(on)
-    if on then
-        php_bars = true
-        if vhp_bars then
-            util.toast("WARNING: You have vehicle HP bars on at the same time as this! Some bars may not appear due to engine limits.")
-        end
-        mod_uses("ped", 1)
-    else
-        php_bars = false
-        mod_uses("ped", -1)
+    php_bars = on
+    mod_uses("ped", if on then 1 else -1)
+    if vhp_bars and on then
+        util.toast("WARNING: You have vehicle HP bars on at the same time as this! Some bars may not appear due to engine limits.")
     end
-end, false)
+end)
 
 peds_ignore = false
 menu.toggle(ped_b_root, "Oblivious peds", {"obliviouspeds"}, "Peds will not care about anything you do. Peds already reacting to you will not forget what you did though.", function(on)
-    if on then
-        peds_ignore = true
-        mod_uses("ped", 1)
-    else
-        peds_ignore = false
-        mod_uses("ped", -1)
-    end
-end, false)
+    peds_ignore = on
+    mod_uses("ped", if on then 1 else -1)
+end)
 
 wantthesmoke = false
 menu.toggle(ped_b_root, "Peds attack me", {"iwantthesmoke"}, "Tells all nearby peds you want the smoke. May break some things.", function(on)
-    if on then
-        wantthesmoke = true
-        mod_uses("ped", 1)
-    else
-        wantthesmoke = false
-        mod_uses("ped", -1)
-    end
-end, false)
+    wantthesmoke = on
+    mod_uses("ped", if on then 1 else -1)
+end)
 
 make_peds_cops = false
 menu.toggle(ped_b_root, "Make nearby peds cops", {"makecops"}, "They\'re not actually real cops, but kind of are. They seem to flee very easily, but will snitch on you. Sort of like mall cops.", function(on)
-    if on then
-        make_peds_cops = true
-        mod_uses("ped", 1)
-    else
-        make_peds_cops = false
-        mod_uses("ped", -1)
-    end
-end, false)
+    make_peds_cops = on
+    mod_uses("ped", if on then 1 else -1)
+end)
 
 menu.toggle(ped_b_root, "Detroit", {"detroit"}, "All nearby NPC\'s duel it out and are given weapons. Recent developments show that this joke is considered insensitive, which is funny because more energy is spent ranting about it on Twitter than trying to fix crime in Detroit.", function(on)
     MISC.SET_RIOT_MODE_ENABLED(on)
-end, false)
+end)
 
 roast_voicelines = false
 menu.toggle(ped_voice, "Roast voicelines", {"npcroasts"}, "Very unethical.", function(on)
     --make_all_peds_say("GENERIC_INSULT_MED", "SPEECH_PARAMS_FORCE_SHOUTED")
-    if on then
-        mod_uses("ped", 1)
-        roast_voicelines = true
-    else
-        mod_uses("ped", -1)
-        roast_voicelines = false
-    end
-end, false)
+    roast_voicelines = on
+    mod_uses("ped", if on then 1 else -1)
+end)
 
 sex_voicelines = false
 menu.toggle(ped_voice, "Sex voicelines", {"sexlines"}, "oH FuCK YeAh", function(on)
-    if on then
-        mod_uses("ped", 1)
-        sex_voicelines = true
-    else
-        mod_uses("ped", -1)
-        sex_voicelines = false
-    end
-end, false)
+    sex_voicelines = on
+    mod_uses("ped", if on then 1 else -1)
+end)
 
 gluck_voicelines = false
 menu.toggle(ped_voice, "Gluck gluck 9000 voicelines", {"gluckgluck9000"}, "I\'m begging you, touch some grass.", function(on)
-    if on then
-        mod_uses("ped", 1)
-        gluck_voicelines = true
-    else
-        mod_uses("ped", -1)
-        gluck_voicelines = false
-    end
-end, false)
+    gluck_voicelines = on
+    mod_uses("ped", if on then 1 else -1)
+end)
 
 screamall = false
 menu.toggle(ped_voice, "Scream", {"screamall"}, "Makes all nearby peds scream horrifically. Awesome.", function(on)
-    if on then
-        mod_uses("ped", 1)
-        screamall = true
-    else
-        mod_uses("ped", -1)
-        screamall = false
-    end
-end, false)
+    screamall = on
+    mod_uses("ped", if on then 1 else -1)
+end)
 
 -- VEHICLES
 
@@ -1422,36 +1359,31 @@ v_traffic_root = menu.list(vehicles_root, "Vehicle traffic", {"lancescripttraffi
 colorizev_root = menu.list(vehicles_root, "Color vehicles", {"lancescriptcolorize"}, "Paint all nearby vehicles colors!")
 
 custom_r = 254
-menu.slider(colorizev_root, "Custom R", {"colorizecustomr"}, "", 1, 255, 254, 1, function(s)
+local ls_colorizecustomr = menu.slider(colorizev_root, "Custom R", {"colorizecustomr"}, "", 1, 255, 254, 1, function(s)
     custom_r = s
 end)
 
 custom_g = 2
-menu.slider(colorizev_root, "Custom G", {"colorizecustomg"}, "", 1, 255, 2, 1, function(s)
+local ls_colorizecustomg = menu.slider(colorizev_root, "Custom G", {"colorizecustomg"}, "", 1, 255, 2, 1, function(s)
     custom_g = s
 end)
 
 custom_b = 252
-menu.slider(colorizev_root, "Custom B", {"colorizecustomb"}, "", 1, 255, 252, 1, function(s)
+local ls_colorizecustomb = menu.slider(colorizev_root, "Custom B", {"colorizecustomb"}, "", 1, 255, 252, 1, function(s)
     custom_b = s
 end)
 
 menu.action(colorizev_root, "RGB preset: Stand magenta", {"rpstandmagenta"}, "g", function(on_click)
-    menu.trigger_commands("colorizecustomr 254")
-    menu.trigger_commands("colorizecustomg 2")
-    menu.trigger_commands("colorizecustomb 252")
+    menu.set_value(ls_colorizecustomr, 254)
+    menu.set_value(ls_colorizecustomg, 2)
+    menu.set_value(ls_colorizecustomb, 252)
 end)
 
 vehicle_chaos = false
 menu.toggle(vc_root, "Vehicle chaos", {"chaos"}, "Enables the chaos...", function(on)
-    if on then
-        vehicle_chaos = true
-        mod_uses("vehicle", 1)
-    else
-        vehicle_chaos = false
-        mod_uses("vehicle", -1)
-    end
-end, false)
+    vehicle_chaos = on
+    mod_uses("vehicle", if on then 1 else -1)
+end)
 
 vc_gravity = true
 menu.toggle(vc_root, "Vehicle chaos gravity", {"chaosgravity"}, "Gravity on/off", function(on)
@@ -1463,55 +1395,36 @@ menu.slider(vc_root, "Vehicle chaos speed", {"chaosspeed"}, "The speed to force 
   vc_speed = s
 end)
 
-menu.toggle(colorizev_root, "Colorize vehicles", {"colorizevehicles"}, "Colorizes all nearby vehicles with the valus you set! Turn on rainbow to RGB this ;", function(on)
-    if on then
-        colorize_cars = true
-        custom_rgb = true
-        mod_uses("vehicle", 1)
-    else
-        colorize_cars = false
-        custom_rgb = false
-        mod_uses("vehicle", -1)
-    end
-end, false)
+local ls_colorizevehicles = menu.toggle(colorizev_root, "Colorize vehicles", {"colorizevehicles"}, "Colorizes all nearby vehicles with the valus you set! Turn on rainbow to RGB this ;", function(on)
+    colorize_cars = on
+    custom_rgb = on
+    mod_uses("vehicle", if on then 1 else -1)
+end)
 
 vhp_bars = false
 menu.toggle(vehicles_root, "Vehicle HP bars", {"vehhpbars"}, "Draw health bars on vehicles.", function(on)
-    if on then
-        vhp_bars = true
-        if php_bars then
-            util.toast("WARNING: You have NPC HP bars on at the same time as this! Some bars may not appear due to engine limits.")
-        end
-        mod_uses("vehicle", 1)
-    else
-        vhp_bars = false
-        mod_uses("vehicle", -1)
-    end
-end, false)
-
-ascend_vehicles = false
-menu.toggle(v_phys_root, "Ascend all nearby vehicles", {"ascendvehicles"}, "It\'s supposed to neatly make them levitate.. but it just sends them spinning in mid air. Which is fucking hilarious.", function(on)
-    if on then
-        ascend_vehicles = true
-        mod_uses("vehicle", 1)
-    else
-        ascend_vehicles = false
-        mod_uses("vehicle", -1)
+    vhp_bars = on
+    mod_uses("vehicle", if on then 1 else -1)
+    if php_bars and on then
+        util.toast("WARNING: You have NPC HP bars on at the same time as this! Some bars may not appear due to engine limits.")
     end
 end)
 
+ascend_vehicles = false
+menu.toggle(v_phys_root, "Ascend all nearby vehicles", {"ascendvehicles"}, "It\'s supposed to neatly make them levitate.. but it just sends them spinning in mid air. Which is fucking hilarious.", function(on)
+    ascend_vehicles = on
+    mod_uses("vehicle", if on then 1 else -1)
+end)
+
 blackhole = false
-menu.toggle(v_phys_root, "Vehicle blackhole", {"blackhole"}, "A SUPER laggy but fun blackhole. When you toggle it on, it will set the blackhole position above you. Retoggle it to change the position. Oh also, this is very resource taxing and may temporarily fuck up collisions.", function(on)
+local ls_blackhole = menu.toggle(v_phys_root, "Vehicle blackhole", {"blackhole"}, "A SUPER laggy but fun blackhole. When you toggle it on, it will set the blackhole position above you. Retoggle it to change the position. Oh also, this is very resource taxing and may temporarily fuck up collisions.", function(on)
+    blackhole = on
+    mod_uses("vehicle", if on then 1 else -1)
     if on then
         holecoords = ENTITY.GET_ENTITY_COORDS(players.user_ped(), true)
         util.toast("Blackhole position has been set 50 units above your position. Retoggle this on and off to change the position.")
-        blackhole = true
-        mod_uses("vehicle", 1)
-    else
-        blackhole = false
-        mod_uses("vehicle", -1)
     end
-end, false)
+end)
 
 hole_zoff = 50
 menu.slider(v_phys_root, "Blackhole Z-offset", {"blackholeoffset"}, "How far above you to place the blackhole. Recommended to keep this fairly high.", 0, 100, 50, 10, function(s)
@@ -1521,42 +1434,27 @@ menu.slider(v_phys_root, "Blackhole Z-offset", {"blackholeoffset"}, "How far abo
 
 beep_cars = false
 menu.toggle(vehicles_root, "Infinite horn on all nearby vehicles", {"beepvehicles"}, "Makes all nearby vehicles beep infinitely. May not be networked.", function(on)
-    if on then
-        beep_cars = true
-        mod_uses("vehicle", 1)
-    else
-        beep_cars = false
-        mod_uses("vehicle", -1)
-    end
-end, false)
+    beep_cars = on
+    mod_uses("vehicle", if on then 1 else -1)
+end)
 
 halt_traffic = false
 menu.toggle(v_traffic_root, "Halt traffic", {"halttraffic"}, "Prevents all nearby vehicles from moving, at all. Not even an inch. Irreversible so be careful.", function(on)
-    if on then
-        halt_traffic = true
-        mod_uses("vehicle", 1)
-    else
-        halt_traffic = false
-        mod_uses("vehicle", -1)
-    end
+    halt_traffic = on
+    mod_uses("vehicle", if on then 1 else -1)
 end)
 
 reverse_traffic = false
 menu.toggle(v_traffic_root, "Reverse traffic", {"reversetraffic"}, "Traffic, but flip it", function(on)
-    if on then
-        reverse_traffic = true
-        mod_uses("vehicle", 1)
-    else
-        reverse_traffic = false
-        mod_uses("vehicle", -1)
-    end
+    reverse_traffic = on
+    mod_uses("vehicle", if on then 1 else -1)
 end)
 menu.toggle(colorizev_root, "Rainbow", {"rainbowvehicles"}, "Requires colorize vehicles to be turned on.", function(on)
     if not colorize_cars then
-        menu.trigger_commands("colorizevehicles on")
+        menu.set_value(ls_colorizevehicles, true)
     end
     custom_rgb = not on
-end, false)
+end)
 
 vehicles_thread = util.create_thread(function (thr)
     while true do
@@ -1679,14 +1577,9 @@ end)
 tp_all_pickups = false
 tp_pickup_tar = players.user_ped()
 menu.toggle(pickups_root, "Teleport all pickups", {"tppickups"}, "Teleports all pickups, right to you.", function(on)
-    if on then
-        tp_all_pickups = true
-        mod_uses("pickup", 1)
-    else
-        tp_all_pickups = false
-        mod_uses("pickup", -1)
-    end
-end, false)
+    tp_all_pickups = on
+    mod_uses("pickup", if on then 1 else -1)
+end)
 
 
 -- WORLD
@@ -2061,7 +1954,7 @@ end)
 -- INDIVIDUAL PLAYER SEGMENTS
 num_attackers = 1
 godmodeatk = true
-freezeloop = false 
+freezeloop = false
 freezetar = -1
 atkgun = 0
 
@@ -2388,7 +2281,7 @@ function set_up_player_actions(pid)
                 ENTITY.SET_ENTITY_VISIBLE(car, true, 0)
             end
         end
-    end, false)
+    end)
     ls_log("forcedact invisv added")
 
     menu.toggle(forcedacts_root, "Attach vehicle to my vehicle", {"attachvtomyv"}, "This MAY OR MAY NOT WORK. It is NOT a bug if this does not work.", function(on)
@@ -2401,7 +2294,7 @@ function set_up_player_actions(pid)
                 ENTITY.DETACH_ENTITY(car, false, false)
             end
         end
-    end, false)
+    end)
     ls_log("forcedact attachv added")
 
     menu.action(ls_nice, "Remove stickybombs from car", {"removebombs"}, "", function(on_click)
@@ -2540,7 +2433,7 @@ function set_up_player_actions(pid)
         else
             ENTITY.DETACH_ENTITY(players.user_ped(), false, false)
         end
-    end, false)
+    end)
 
 
     menu.toggle(ls_neutral, "Attach to player car", {"attachtocar"}, "Only works if they have a car/last car", function(on)
@@ -2550,7 +2443,7 @@ function set_up_player_actions(pid)
         else
             ENTITY.DETACH_ENTITY(players.user_ped(), false, false)
         end
-    end, false)
+    end)
 
     menu.toggle(ls_neutral, "Attach current car to player car", {"attachcurrenttocar"}, "Only works if they have a car/last car", function(on)
         local lastveh = PED.GET_VEHICLE_PED_IS_IN(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid), true)
@@ -2559,7 +2452,7 @@ function set_up_player_actions(pid)
         else
             ENTITY.DETACH_ENTITY(player_cur_car, false, false)
         end
-    end, false)
+    end)
 
     menu.action(ls_naughty, "Chop up", {"chopup"}, "Makes chop suey of the player with helicopter blades. Works best if your player is nearby.", function(on_click)
         local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
@@ -2584,17 +2477,17 @@ function set_up_player_actions(pid)
         if on then
             if not blackhole then
                 blackhole = true
-                menu.trigger_commands("blackhole on")
+                menu.set_value(ls_blackhole, true)
             end
             bh_target = pid
         else
             bh_target = -1
             if blackhole then
                 blackhole = false
-                menu.trigger_commands("blackhole off")
+                menu.set_value(ls_blackhole, false)
             end
         end
-    end, false)
+    end)
 
     menu.action(customatk_root, "Custom ped model", {"custompedmodel"}, "Input a custom model for the attacker. The model string, NOT the hash.", function(on_click)
         util.toast("Please input the model hash")
@@ -2907,14 +2800,9 @@ function set_up_player_actions(pid)
     end)
 
     menu.toggle(npctrolls_root, "Nearby peds combat player", {"combat"}, "Tells nearby peds to combat the player.", function(on)
+        aped_combat = on
         combat_tar = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
-        if on then
-            aped_combat = true
-            mod_uses("ped", 1)
-        else
-            aped_combat = false
-            mod_uses("ped", -1)
-        end
+        mod_uses("ped", if on then 1 else -1)
     end)
 
     menu.action(npctrolls_root, "Fill car with peds", {"fillcar"}, "Fills the player\'s car with nearby peds", function(on_click)
@@ -2970,15 +2858,12 @@ function set_up_player_actions(pid)
     end)
     
     menu.toggle(npctrolls_root, "Nearby traffic chases player", {"pedchase"}, "", function(on)
+        ped_chase = on
+        mod_uses("ped", if on then 1 else -1)
         if on then
-            ped_chase = true
-            mod_uses("ped", 1)
             chase_target = pid
-        else
-            ped_chase = false
-            mod_uses("ped", -1)
         end
-    end, false)
+    end)
 
     menu.action(attackers_root, "Clown attack", {"clownattack"}, "Sends clowns to attack the player", function(on_click)
         local player_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
@@ -3042,25 +2927,22 @@ function set_up_player_actions(pid)
 
     menu.toggle(attackers_root, "Godmode attackers", {"godmodeatk"}, "Godmodes attackers. Some things are intentionally left out of this, because I think it\'s funner that way. Cry.", function(on)
         godmodeatk = on
-    end, false)
+    end)
 end
 
 
 broke_blips = {}
 broke_radar = false
 menu.toggle(apnaughty_root, "Broke radar", {"brokeradar"}, "Shows players who are broke on your map. They will have orange circles around them on the map. Really lets you see how impoverished GTA:O is.", function(on)
-    if on then
-        broke_radar = true
-        mod_uses("player", 1)
-    else
-        broke_radar = false
-        mod_uses("player", -1)
+    broke_radar = on
+    mod_uses("player", if on then 1 else -1)
+    if not on then
         for plyr,blip in pairs(broke_blips) do
             HUD.SET_BLIP_ALPHA(blip, 0)
             broke_blips[plyr] = nil
         end
     end
-end, false)
+end)
 
 broke_threshold = 1000000
 menu.slider(apnaughty_root, "Broke threshold", {"brokethresh"}, "How much money a user must have to not be considered broke by the broke radar.", 100000, 1000000000, 1000000, 100000, function(s)
@@ -3070,35 +2952,25 @@ menu.slider(apnaughty_root, "Broke threshold", {"brokethresh"}, "How much money 
 
 antioppressor = false
 menu.toggle(ap_root, "Antioppressor", {"antioppressor"}, "Never see a fly again! Automatically deletes all active oppressor mkII\'s.", function(on)
-    if on then
-        antioppressor = true
-        mod_uses("player", 1)
-    else
-        antioppressor = false
-        mod_uses("player", -1)
-    end
-end, false)
+    antioppressor = on
+    mod_uses("player", if on then 1 else -1)
+end)
 
 noarmedvehs = false
 menu.toggle(ap_root, "Delete armed vehicles", {"noarmedvehs"}, "Deletes any vehicle with a weapon. IMPORTANT: the game reports some false positives, ie considers a camera on a heli a \"gun\"..", function(on)
-    if on then
-        noarmedvehs = true
-        mod_uses("player", 1)
-    else
-        noarmedvehs = false
-        mod_uses("player", -1)
-    end
-end, false)
+    noarmedvehs = on
+    mod_uses("player", if on then 1 else -1)
+end)
 
 kicktryhardnames = false
 menu.toggle(online_root, "Auto-crash/kick tryhard names", {"kicktryhardnames"}, "Crashes, then kicks (for if the crash didn\'t succeed) those losers with only L\'s and I\'s in their name, in such a way that makes them hard to report. Fuck them.", function(on)
     kicktryhardnames = on
-end, false)
+end)
 
 kicktryhardkds = false
 menu.toggle(online_root, "Auto-kick high-KD tryhards", {"kicktryhardkds"}, "Auto-kicks tryhards with an obsessively high KD. Might piss off a lot of modders, but so be it.", function(on)
     kicktryhardkds = on
-end, false)
+end)
 
 local kdthres = 6
 menu.slider(online_root, "Auto-kick KD threshold", {"autokickkd"}, "Threshold players must pass in their KD to be autokicked, if enabled.", 1, 100, 6, 1, function(s)
@@ -3136,15 +3008,10 @@ end)
 
 show_voicechatters = false
 menu.toggle(online_root, "Show me who\'s using voicechat", {"showvoicechat"}, "Shows who is actually using GTA:O voice chat, in 2021. Which is likely to be nobody. So this is a bitch to test. but.", function(on)
+    show_voicechatters = on
     ped = players.user_ped()
-    if on then
-        show_voicechatters = true
-        mod_uses("player", 1)
-    else
-        show_voicechatters = false
-        mod_uses("player", -1)
-    end
-end, false)
+    mod_uses("player", if on then 1 else -1)
+end)
 
 local cur_names = {}
 for k,p in pairs(players.list(true, true, true)) do
@@ -3265,7 +3132,7 @@ end)
 -- LANCESCRIPT OPTIONS
 menu.toggle(lancescript_root, "Debug", {"lancescriptdebug"}, "Spams console and toasts with useful debug info.", function(on)
     ls_debug = on
-end, false)
+end)
 
 
 -- SCRIPT IS "FINISHED LOADING"
@@ -3381,7 +3248,7 @@ while true do
 
     if v_fly then
         if PED.GET_VEHICLE_PED_IS_IN(players.user_ped(), false) ~= v_f_plane then
-            menu.trigger_commands("vehiclefly off")
+            menu.set_value(ls_vehiclefly, false)
         end
     end
 
@@ -3405,9 +3272,6 @@ while true do
     end
 
     -- ## WEAPONS SHIT
-    if rainbow_tint then
-        WEAPON.SET_PED_WEAPON_TINT_INDEX(players.user_ped(),WEAPON.GET_SELECTED_PED_WEAPON(players.user_ped()), cur_tint)
-    end
 
     if grapplegun then
         ls_log("grapple hook loop")
@@ -3586,4 +3450,3 @@ while true do
     end
     util.yield()
 end
-
