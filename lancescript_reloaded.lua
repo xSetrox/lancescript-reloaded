@@ -90,7 +90,6 @@ apnice_root = menu.list(ap_root, "Nice", {"apnice"}, "")
 apnaughty_root = menu.list(ap_root, "Naughty", {"apnaughty"}, "")
 apneutral_root = menu.list(ap_root, "Neutral", {"apneutral"}, "")
 ap_vaddons = menu.list(apnice_root, "Vehicle addons", {"lsvaddons"}, "")
-apforcedacts_root = menu.list(apnaughty_root, "Forced vehicle actions", {"apforcedacts"}, "")
 -- END ONLINE SUBSECTIONS
 -- BEGIN ENTITIES SUBSECTION
 entities_root = menu.list(menu.my_root(), "Entities", {"lancescriptentities"}, "Peds, vehicles you aren\'t in, and pickups")
@@ -2410,17 +2409,6 @@ function set_up_player_actions(pid)
         NETWORK.REMOVE_ALL_STICKY_BOMBS_FROM_ENTITY(car)
     end)
     ls_log("forcedact removesticky added")
-
-    menu.toggle(ls_nice, "Set as pickup teleport target", {"tppickutar"}, "", function(on)
-        if on then
-            tp_pickup_tar = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
-            if not tp_all_pickups then
-                menu.trigger_commands("tppickups")
-            end
-        else
-            tp_pickup_tar = players.user_ped()
-        end
-    end, false)
 
     menu.action(ls_vaddons, "Ramp", {"addramp"}, "", function(on_click)
         give_car_addon(pid, util.joaat("prop_mp_ramp_01"), false, 180.0)

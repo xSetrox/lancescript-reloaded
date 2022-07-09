@@ -9,3 +9,6 @@ Please do not confuse my work with unofficial continuations. I'm back now, so I 
 ## Install
 Download the repo as zip and drag everything from it, except readme.md and license.txt, into your Stand's lua scripts folder. Done.  
 Bug reports and suggestions should go into the Discord (there is a button in the script menu to access it).
+
+## What changed? 
+Check the releases page!
