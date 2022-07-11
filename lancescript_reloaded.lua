@@ -1,5 +1,8 @@
 -- LANCESCRIPT RELOADED
 util.require_natives("1640181023")
+gta_labels = require('all_labels')
+all_labels = gta_labels.all_labels
+sexts = gta_labels.sexts
 coded_for_gtao_version = 1.60
 is_loading = true
 ls_debug = false
@@ -89,10 +92,11 @@ menu.action(menu.my_root(), "Players shortcut", {}, "Quickly opens session playe
 end)
 
 ap_root = menu.list(online_root, "All players", {"lancescriptonline"}, "Players")
-apnice_root = menu.list(ap_root, "Nice", {"apnice"}, "")
-apnaughty_root = menu.list(ap_root, "Naughty", {"apnaughty"}, "")
+apfriendly_root = menu.list(ap_root, "friendly", {"apfriendly"}, "")
+aphostile_root = menu.list(ap_root, "Hostile", {"aphostile"}, "")
 apneutral_root = menu.list(ap_root, "Neutral", {"apneutral"}, "")
-ap_vaddons = menu.list(apnice_root, "Vehicle addons", {"lsvaddons"}, "")
+ap_texts_root = menu.list(apneutral_root, "Texts", {"aptexts"}, "")
+ap_vaddons = menu.list(apfriendly_root, "Vehicle addons", {"lsvaddons"}, "")
 -- END ONLINE SUBSECTIONS
 -- BEGIN ENTITIES SUBSECTION
 entities_root = menu.list(menu.my_root(), "Entities", {"lancescriptentities"}, "Peds, vehicles you aren\'t in, and pickups")
@@ -515,7 +519,6 @@ menu.toggle(self_root, "Burning man", {"burningman"}, "Walk da fire (turn off al
     if on then
         FIRE.START_ENTITY_FIRE(players.user_ped())
         ENTITY.SET_ENTITY_PROOFS(players.user_ped(), false, true, false, false, false, false, 0, false) -- fire proof
-        --menu.trigger_commands("demigodmode on")
     else
         FIRE.STOP_ENTITY_FIRE(players.user_ped())
         ENTITY.SET_ENTITY_PROOFS(players.user_ped(), false, false, false, false, false, false, 0, false)
@@ -906,7 +909,8 @@ function get_aimbot_target()
     return cur_tar
 end
 
-
+sa_showtarget = true
+satarget_usefov = true
 menu.toggle_loop(silent_aimbotroot, "Silent aimbot", {"saimbottoggle"}, "Turn silent aimbot on/off", function(toggle)
     local target = get_aimbot_target()
     if target ~= 0 then
@@ -936,12 +940,12 @@ menu.toggle(silent_aimbotroot, "Silent aimbot NPC\'s", {"saimbotpeds"}, "", func
     satarget_npcs = on
 end)
 
-menu.toggle(silent_aimbotroot, "Use FOV", {"saimbotusefov"}, "You won\'t kill someone through your asshole.", function(on)
+menu.toggle(silent_aimbotroot, "Use FOV", {"saimbotusefov"}, "Most accurate in first-person for really small FOV values. Usually it won\'t really matter though.", function(on)
     satarget_usefov = on
-end)
+end, true)
 
-sa_fov = 180
-menu.slider(silent_aimbotroot, "FOV", {"saimbotfov"}, "", 1, 270, 180, 1, function(s)
+sa_fov = 60
+menu.slider(silent_aimbotroot, "FOV", {"saimbotfov"}, "", 1, 270, 60, 1, function(s)
     sa_fov = s
 end)
 
@@ -967,7 +971,6 @@ menu.slider(silent_aimbotroot, "Damage override amount", {"saimbotdamageoverride
     sa_odmg = s
 end)
 
-sa_showtarget = false
 menu.toggle(silent_aimbotroot, "Display target", {"saimbotshowtarget"}, "Whether or not to draw an AR beacon on who your aimbot will hit.", function(on)
     sa_showtarget = on
 end, true)
@@ -1157,10 +1160,10 @@ spawn_animals_root = menu.list(spawn_peds_root, "Animals", {"lancescriptspawnped
 
 
 menu.action(spawn_peds_root, "Input hash", {"inputpedspawnhash"}, "Spawn whatever you want", function(on_click)
-    util.toast("Please input the model hash (should be a number)")
+    util.toast("Please input the model hash (should be a string)")
     menu.show_command_box("inputpedspawnhash ")
 end, function(on_command)
-    spawn_ped(on_command)
+    spawn_ped(util.joaat(on_command))
 end)
 
 
@@ -1203,6 +1206,21 @@ local ls_givepedswep = menu.click_slider(peds_root, "Gun to give to all peds", {
         allpeds_gun = good_guns[s]
     end
 end)
+
+menu.action(peds_root, "Teleport all to me", {"tpallpedshere"}, "", function(on_click)
+    local c = ENTITY.GET_ENTITY_COORDS(players.user_ped(), false)
+    all_peds = entities.get_all_peds_as_handles()
+    for k,ped in pairs(all_peds) do
+        if not PED.IS_PED_A_PLAYER(ped) then
+            if PED.IS_PED_IN_ANY_VEHICLE(ped, true) then
+                TASK.CLEAR_PED_TASKS_IMMEDIATELY(ped)
+                TASK.TASK_LEAVE_ANY_VEHICLE(ped, 0, 16)
+            end
+            ENTITY.SET_ENTITY_COORDS(ped, c.x, c.y, c.z)
+        end
+    end
+end)
+
 menu.set_value(ls_givepedswep, 0)
 
 function task_handler(type)
@@ -1307,7 +1325,7 @@ end)
 
 -- VEHICLES
 
-custom_rgb = true
+custom_rgb = false
 rgb_thread = util.create_thread(function (thr)
     local r = 255
     local g = 0
@@ -1341,7 +1359,7 @@ v_traffic_root = menu.list(vehicles_root, "Vehicle traffic", {"lancescripttraffi
 colorizev_root = menu.list(vehicles_root, "Color vehicles", {"lancescriptcolorize"}, "Paint all nearby vehicles colors!")
 
 custom_r = 254
-local ls_colorizecustomg = menu.slider(colorizev_root, "Custom G", {"colorizecustomg"}, "", 1, 255, 2, 1, function(s)
+local ls_colorizecustomg = menu.slider(colorizev_root, "Custom R", {"colorizecustomr"}, "", 1, 255, 2, 1, function(s)
     custom_r = s
 end)
 
@@ -1377,6 +1395,7 @@ menu.slider(vc_root, "Vehicle chaos speed", {"chaosspeed"}, "The speed to force 
   vc_speed = s
 end)
 
+--colorize_cars = false
 local ls_colorizevehicles = menu.toggle(colorizev_root, "Colorize vehicles", {"colorizevehicles"}, "Colorizes all nearby vehicles with the valus you set! Turn on rainbow to RGB this ;", function(on)
     colorize_cars = on
     custom_rgb = on
@@ -1786,7 +1805,7 @@ function get_richest_player()
         return
     end
     if most ~= 0 then
-        return PLAYER.GET_PLAYER_NAME(mostp) .. " is the richestplayer in the session! (with $" .. players.get_wallet(mostp) .. " in their wallet and $" .. players.get_bank(mostp) .. " in the bank!)"
+        return PLAYER.GET_PLAYER_NAME(mostp) .. " is the richest player in the session! (with $" .. players.get_wallet(mostp) .. " in their wallet and $" .. players.get_bank(mostp) .. " in the bank!)"
     else
         util.toast("Could not find richest player.")
         return nil
@@ -1880,7 +1899,7 @@ function attachall(offx, offy, offz, angx, angy, angz, hash, bone, isnpc, isveh)
     end
 end
 
-local attachall_root = menu.list(apnaughty_root, "Attach", {"attach"}, "")
+local attachall_root = menu.list(aphostile_root, "Attach", {"attach"}, "")
 local flag_root = menu.list(attachall_root, "Flags", {"lsflags"}, "")
 
 menu.action(attachall_root, "Ball", {"aaball"}, "The OG", function(on_click)
@@ -2083,25 +2102,37 @@ function send_groundv_attacker(vhash, phash, pid, givegun)
     end
 end
 
+function send_player_label_sms(label, pid)
+    local event_data = {-1702264142, players.user(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+    local out = label:sub(1, 127)
+    for i = 0, #out -1 do
+        local slot = i // 8
+        local byte = string.byte(out, i + 1)
+        event_data[slot + 3] = event_data[slot + 3] | byte << ( (i - slot * 8) * 8)
+    end
+    util.trigger_script_event(1 << pid, event_data)
+end
+
 function set_up_player_actions(pid)
     ls_log("Setting up player actions for pid " .. pid)
     menu.divider(menu.player_root(pid), "LanceScript Reloaded")
-    local ls_nice = menu.list(menu.player_root(pid), "Lancescript: Nice", {"lsnice"}, "")
+    local ls_friendly = menu.list(menu.player_root(pid), "Lancescript: Friendly", {"lsfriendly"}, "")
     ls_log("Set up vaddons for pid " .. pid)
-    local ls_vaddons = menu.list(ls_nice, "Vehicle addons", {"lsvaddons"}, "")
-    ls_log("Set up ls naughty for pid " .. pid)
-    local ls_naughty = menu.list(menu.player_root(pid), "Lancescript: Naughty", {"lsnaughty"}, "")
-    --local scriptevents = menu.list(ls_naughty, "Script events", {"lsse"}, "Send script events to the player to do various things")
+    local ls_vaddons = menu.list(ls_friendly, "Vehicle addons", {"lsvaddons"}, "")
+    ls_log("Set up ls hostile for pid " .. pid)
+    local ls_hostile = menu.list(menu.player_root(pid), "Lancescript: Hostile", {"lshostile"}, "")
+    --local scriptevents = menu.list(ls_hostile, "Script events", {"lsse"}, "Send script events to the player to do various things")
     local ls_neutral = menu.list(menu.player_root(pid), "Lancescript: Neutral", {"lsneutral"}, "")
-    spawnvehicle_root = menu.list(ls_nice, "Give vehicle", {"spawnveh"}, "")
-    explosions_root = menu.list(ls_naughty, "Projectiles/explosions", {"lancescriptexplosions"}, "Fire jet, water jet, launch player, etc.")
+    spawnvehicle_root = menu.list(ls_friendly, "Give vehicle", {"spawnveh"}, "")
+    explosions_root = menu.list(ls_hostile, "Projectiles/explosions", {"lancescriptexplosions"}, "Fire jet, water jet, launch player, etc.")
     forcedacts_root = menu.list(ls_neutral, "Forced actions", {"forcedacts"}, "")
     forcedacts_tp_root = menu.list(forcedacts_root, "Teleport", {"forcedactstp"}, "")
-    npctrolls_root = menu.list(ls_naughty, "NPC trolling", {"npctrolls"}, "")
+    npctrolls_root = menu.list(ls_hostile, "NPC trolling", {"npctrolls"}, "")
     attackers_root = menu.list(npctrolls_root, "Attackers", {"lancescriptattackers"}, "Send attackers")
     customatk_root = menu.list(attackers_root, "Custom attackers", {"lancescriptcustomatk"}, "Spawn custom attackers")
-    objecttrolls_root = menu.list(ls_naughty, "Object trolling", {"objecttrolls"}, "")
-    ram_root = menu.list(ls_naughty, "Ram", {"ram"}, "")
+    objecttrolls_root = menu.list(ls_hostile, "Object trolling", {"objecttrolls"}, "")
+    texts_root = menu.list(ls_neutral, "Texts", {"hostiletexts"}, "")
+    ram_root = menu.list(ls_hostile, "Ram", {"ram"}, "")
     ls_log("Set up roots for pid " .. pid)
     ls_log("Adding menu actions and toggles for pid " .. pid)
 
@@ -2150,6 +2181,14 @@ function set_up_player_actions(pid)
         c.x = -353.84512
         c.y = -135.59108
         c.z = 39.009624
+        tp_player_car_to_coords(pid, c)
+    end)
+
+    menu.action(forcedacts_tp_root, "Teleport vehicle into bennys", {"tpvbennys"}, "This MAY OR MAY NOT WORK. It is NOT a bug if this does not work.", function(on_click)
+        local c = {}
+        c.x = -206.46237
+        c.y = -1308.9502
+        c.z = 31.29596
         tp_player_car_to_coords(pid, c)
     end)
 
@@ -2315,7 +2354,7 @@ function set_up_player_actions(pid)
     end, false)
     ls_log("forcedact attachv added")
 
-    menu.action(ls_nice, "Remove stickybombs from car", {"removebombs"}, "", function(on_click)
+    menu.action(ls_friendly, "Remove stickybombs from car", {"removebombs"}, "", function(on_click)
         local car = PED.GET_VEHICLE_PED_IS_IN(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid), true)
         NETWORK.REMOVE_ALL_STICKY_BOMBS_FROM_ENTITY(car)
     end)
@@ -2341,7 +2380,7 @@ function set_up_player_actions(pid)
         give_car_addon(pid, hash, true, 0.0)
     end)
 
-    menu.action(ls_naughty, "Crush player", {"crush"}, "Spawns a heavy truck several meters above them and forces its Z velocity to -100 to absolutely decimate them when it lands.", function(on_click)
+    menu.action(ls_hostile, "Crush player", {"crush"}, "Spawns a heavy truck several meters above them and forces its Z velocity to -100 to absolutely decimate them when it lands.", function(on_click)
         local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         coords = ENTITY.GET_ENTITY_COORDS(target_ped, false)
         coords.x = coords['x']
@@ -2422,7 +2461,7 @@ function set_up_player_actions(pid)
         FIRE.ADD_EXPLOSION(coords['x'], coords['y'], coords['z'], 12, 100.0, true, false, 0.0)
     end)
 
-    menu.toggle(ls_naughty, "Vehicle limp", {"vehiclelimp"}, "Makes the player\'s vehicle \"limp\" by creating a fight for entity ownership of it between you and the player. May raise red flags on some menus.", function(on)
+    menu.toggle(ls_hostile, "Vehicle limp", {"vehiclelimp"}, "Makes the player\'s vehicle \"limp\" by creating a fight for entity ownership of it between you and the player. May raise red flags on some menus.", function(on)
         local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         local car = PED.GET_VEHICLE_PED_IS_IN(ped)
         request_control_of_entity(car)
@@ -2472,7 +2511,7 @@ function set_up_player_actions(pid)
         end
     end, false)
 
-    menu.action(ls_naughty, "Chop up", {"chopup"}, "Makes chop suey of the player with helicopter blades. Works best if your player is nearby.", function(on_click)
+    menu.action(ls_hostile, "Chop up", {"chopup"}, "Makes chop suey of the player with helicopter blades. Works best if your player is nearby.", function(on_click)
         local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         local coords = ENTITY.GET_ENTITY_COORDS(target_ped, false)
         coords.x = coords['x']
@@ -2491,7 +2530,7 @@ function set_up_player_actions(pid)
         VEHICLE.SET_VEHICLE_ENGINE_ON(heli, true, true, true)
     end)
 
-    menu.toggle(ls_naughty, "Blackhole target", {"bhtarget"}, "A really toxic thing to do but you should do it anyways because it\'s fun. Obviously requires blackhole to be on.", function(on)
+    menu.toggle(ls_hostile, "Blackhole target", {"bhtarget"}, "A really toxic thing to do but you should do it anyways because it\'s fun. Obviously requires blackhole to be on.", function(on)
         if on then
             if not blackhole then
                 blackhole = true
@@ -2587,25 +2626,6 @@ function set_up_player_actions(pid)
         end
     end)
 
-    menu.toggle(objecttrolls_root, "Glitch vehicle", {"glitchveh"}, "Glitches the car they\'re in/if they enter one.", function(on)
-        if on then
-            local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
-            local veh = PED.GET_VEHICLE_PED_IS_IN(target_ped, true)
-            local coords = ENTITY.GET_ENTITY_COORDS(target_ped, false)
-            coords.x = coords['x']
-            coords.y = coords['y']
-            coords.z = coords['z']
-            local hash = 4173164723
-            request_model_load(hash)
-            guitar = OBJECT.CREATE_OBJECT_NO_OFFSET(hash, coords['x'], coords['y'], coords['z'], true, false, false)
-            ENTITY.SET_ENTITY_VISIBLE(guitar, false)
-            ENTITY.ATTACH_ENTITY_TO_ENTITY(guitar, target_ped, 0, 0.0, -0.20, 0.50, 1.0, 1.0,1, true, true, true, false, 0, true)
-        else
-            ENTITY.DETACH_ENTITY(guitar, false, false)
-            entities.delete(guitar)
-        end
-    end)
-
     menu.action(attackers_root, "Send jets", {"sendjets"}, "We don\'t charge $140 for this extremely basic feature. However the jets will only target the player until the player dies, otherwise we would need another thread, and I don\'t want to make one.", function(on_click)
         local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         coords = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(target_ped, 1.0, 0.0, 500.0)
@@ -2662,7 +2682,7 @@ function set_up_player_actions(pid)
         num_attackers = s
     end)
 
-    menu.action(objecttrolls_root, "Ramp in front of player", {"ramp"}, "Spawns a ramp right in front of the player. Most nicely used when they are in a car.", function(on_click)
+    menu.action(objecttrolls_root, "Ramp in front of player", {"ramp"}, "Spawns a ramp right in front of the player. Most friendlyly used when they are in a car.", function(on_click)
         local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         local hash = 2282807134
         request_model_load(hash)
@@ -2692,18 +2712,11 @@ function set_up_player_actions(pid)
         ENTITY.FREEZE_ENTITY_POSITION(obj, true)
     end)
 
-    menu.action(ls_naughty, "Owned snipe", {"snipe"}, "Snipes the player with you as the attacker [Will not work if you do not have LOS with the target]", function(on_click)
+    menu.action(ls_hostile, "Snipe", {"snipe"}, "Snipes the player with you as the attacker [Will not work if you do not have LOS with the target]", function(on_click)
         local owner = players.user_ped()
         local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         local target = ENTITY.GET_ENTITY_COORDS(target_ped)
         MISC.SHOOT_SINGLE_BULLET_BETWEEN_COORDS(target['x'], target['y'], target['z'], target['x'], target['y'], target['z']+0.1, 300.0, true, 100416529, owner, true, false, 100.0)
-    end)
-
-    menu.action(ls_naughty, "Anon snipe", {"selfsnipe"}, "Snipes the player anonymously, as if a random ped did it [The randomly selected ped needs to have LOS, I think]", function(on_click)
-        local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
-        local target = ENTITY.GET_ENTITY_COORDS(target_ped)
-        local random_ped = get_random_ped()
-        MISC.SHOOT_SINGLE_BULLET_BETWEEN_COORDS(target['x'], target['y'], target['z'], target['x'], target['y'], target['z']+0.1, 300.0, true, 100416529, random_ped, true, false, 100.0)
     end)
 
     menu.action(explosions_root, "Launch player", {"launchplayer"}, "launches them with the uhhh ray gun or whatever. also creates a VERY considerable amount of ear pain.", function(on_click)
@@ -2723,13 +2736,20 @@ function set_up_player_actions(pid)
         customexplosion = s
       end)
 
-    menu.toggle(explosions_root, "Custom explosion loop", {"customexplosions"}, "", function(on)
+    menu.toggle_loop(explosions_root, "Custom explosion loop", {"customexplosions"}, "", function(on)
         local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         local coords = ENTITY.GET_ENTITY_COORDS(target_ped)
         FIRE.ADD_EXPLOSION(coords['x'], coords['y'], coords['z'], customexplosion, 1.0, true, false, 0.0)
     end)
 
-    menu.action(ls_naughty, "Drop anon stickybomb", {"anonsticky"}, "Stubborn, but works when it works.", function(on_click)
+    menu.toggle_loop(explosions_root, "Random explosion loop", {"randomexplosions"}, "", function(on)
+        local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
+        local coords = ENTITY.GET_ENTITY_COORDS(target_ped)
+        FIRE.ADD_EXPLOSION(coords['x'], coords['y'], coords['z'], math.random(0, 82), 1.0, true, false, 0.0)
+    end)
+
+
+    menu.action(ls_hostile, "Drop anon stickybomb", {"anonsticky"}, "Stubborn, but works when it works.", function(on_click)
         local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         local target = ENTITY.GET_ENTITY_COORDS(target_ped)
         local random_ped = get_random_ped()
@@ -2737,7 +2757,7 @@ function set_up_player_actions(pid)
     end)
 
     --SET_VEHICLE_WHEEL_HEALTH(Vehicle vehicle, int wheelIndex, float health)
-    menu.action(ls_naughty, "Cage", {"lscage"}, "Basic cage option. Cause you cant handle yourself. We are a little more ethical here at Lance Studios though, so the cage has some wiggle room (our special cage model also means that like, no menu blocks the model).", function(on_click)
+    menu.action(ls_hostile, "Cage", {"lscage"}, "Basic cage option. Cause you cant handle yourself. We are a little more ethical here at Lance Studios though, so the cage has some wiggle room (our special cage model also means that like, no menu blocks the model).", function(on_click)
         local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         local coords = ENTITY.GET_ENTITY_COORDS(ped, true)
         coords.x = coords['x']
@@ -2751,14 +2771,13 @@ function set_up_player_actions(pid)
         ENTITY.SET_ENTITY_ROTATION(cage2, 0.0, 90.0, 0.0, 1, true)
     end)
 
-    menu.action(ls_naughty, "Delete vehicle", {"deleteveh"}, "delete the vehicle they\'re in lol", function(on_click)
+    menu.action(ls_hostile, "Delete vehicle", {"deleteveh"}, "delete the vehicle they\'re in lol", function(on_click)
         local car = PED.GET_VEHICLE_PED_IS_IN(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid), true)
         entities.delete(car)
     end)
 
-    menu.action(ls_naughty, "Cargo plane trap", {"cargoplanetrap"}, "Traps the player in a cargo plane.", function(on_click)
+    menu.action(ls_hostile, "Cargo plane trap", {"cargoplanetrap"}, "Traps the player in a cargo plane.", function(on_click)
         local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
-        -- TODO: fine tune this
         local coords = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(ped, 0.0, 0.0, 0.0)
         coords.x = coords['x']
         coords.y = coords['y']
@@ -2773,7 +2792,46 @@ function set_up_player_actions(pid)
             VEHICLE.SET_VEHICLE_DOOR_LATCHED(cargo, i, true, true, true)
         end
     end)
+
+    menu.action(ls_hostile, "Raise player", {"raise"}, "Raises the player up with an invisible platform. At its best, this will fall kill the player if they dont deploy a chute. At its worst, it will just glitch the player around.", function(on_click)
+        local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
+        local hash = util.joaat("stt_prop_stunt_bblock_mdm3")
+        request_model_load(hash)
+        local c = ENTITY.GET_ENTITY_COORDS(ped, false)
+        local lifter = OBJECT.CREATE_OBJECT_NO_OFFSET(hash, c['x'], c['y'], c['z'], true, false, false)
+        ENTITY.SET_ENTITY_ALPHA(lifter, 0)
+        ENTITY.SET_ENTITY_VISIBLE(lifter, false, 0)
+        local start_z_off = 0
+        for i=1, 500 do
+            local c = ENTITY.GET_ENTITY_COORDS(ped, false)
+            c.z = c.z - 1
+            start_z_off = start_z_off + 0.002
+            ENTITY.SET_ENTITY_COORDS(lifter, c.x, c.y, c.z+start_z_off, false, false, false, false)
+            util.yield(5)
+        end
+        entities.delete(lifter)
+    end)    
     
+    menu.action(texts_root, "Send nudes", {"sendnudes"}, ";)", function(on_click)
+        for i=1, #sexts do
+            send_player_label_sms(sexts[i], pid)
+        end
+    end)
+
+    menu.toggle_loop(texts_root, "Spam nudes", {"spamsexts"}, ";)", function(on)
+        for i=1, #sexts do
+            send_player_label_sms(sexts[i], pid)
+            util.yield()
+        end
+    end)
+
+    menu.action(texts_root, "Spam random texts", {"spamlabels"}, "very toxic", function(on)
+        for i=1, 1000 do
+            send_player_label_sms(all_labels[math.random(1, #all_labels)], pid)
+            util.yield()
+        end
+    end)
+
     menu.action(npctrolls_root, "NPC jack last car v3.0", {"npcjack"}, "Sends an NPC to steal their car.", function(on_click)
         npc_jack(pid, false)
     end)
@@ -2799,21 +2857,6 @@ function set_up_player_actions(pid)
             PED.SET_PED_COMBAT_ATTRIBUTES(ped, 46, true)
             WEAPON.GIVE_WEAPON_TO_PED(ped, -1834847097, 0, false, true)
             TASK.TASK_COMBAT_PED(ped, player_ped, 0, 16)
-        end
-    end)
-
-    menu.action(npctrolls_root, "Tell nearby peds to arrest", {"arrest"}, "Tells nearby peds to arrest the player. Obviously there is no arrest mechanic in GTA:O. So they don\'t actually arrest. But they will try.", function(on_click)
-        local player_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
-        local all_peds = entities.get_all_peds_as_handles()
-        for k, ped in pairs(all_peds) do
-            if not PED.IS_PED_A_PLAYER(ped) then
-                request_control_of_entity(ped)
-                PED.SET_PED_AS_COP(ped, true)
-                PED.SET_PED_FLEE_ATTRIBUTES(ped, 0, false)
-                PED.SET_PED_COMBAT_ATTRIBUTES(ped, 46, true)
-                WEAPON.GIVE_WEAPON_TO_PED(ped, 453432689, 0, false, true)
-                TASK.TASK_ARREST_PED(ped, player_ped)
-            end
         end
     end)
 
@@ -2953,7 +2996,7 @@ end
 
 broke_blips = {}
 broke_radar = false
-menu.toggle(apnaughty_root, "Broke radar", {"brokeradar"}, "Shows players who are broke on your map. They will have orange circles around them on the map. Really lets you see how impoverished GTA:O is.", function(on)
+menu.toggle(aphostile_root, "Broke radar", {"brokeradar"}, "Shows players who are broke on your map. They will have orange circles around them on the map. Really lets you see how impoverished GTA:O is.", function(on)
     broke_radar = on
     mod_uses("player", if on then 1 else -1)
     if not on then
@@ -2967,7 +3010,7 @@ menu.toggle(apnaughty_root, "Broke radar", {"brokeradar"}, "Shows players who ar
 end)
 
 broke_threshold = 1000000
-menu.slider(apnaughty_root, "Broke threshold", {"brokethresh"}, "How much money a user must have to not be considered broke by the broke radar.", 100000, 1000000000, 1000000, 100000, function(s)
+menu.slider(aphostile_root, "Broke threshold", {"brokethresh"}, "How much money a user must have to not be considered broke by the broke radar.", 100000, 1000000000, 1000000, 100000, function(s)
     broke_threshold = s
   end)
 
@@ -2984,6 +3027,35 @@ menu.toggle(ap_root, "Delete armed vehicles", {"noarmedvehs"}, "Deletes any vehi
     mod_uses("player", if on then 1 else -1)
 end)
 
+menu.action(ap_texts_root, "Send nudes", {"sendnudes"}, ";)", function(on_click)
+    for k,pid in pairs(players.list(false, true, true)) do
+        for i=1, #sexts do
+            send_player_label_sms(sexts[i], pid)
+            util.yield()
+        end
+        util.yield()
+    end
+end)
+
+menu.toggle_loop(ap_texts_root, "Spam nudes", {"spamsexts"}, ";)", function(on)
+    for k,pid in pairs(players.list(false, true, true)) do
+        for i=1, #sexts do
+            send_player_label_sms(sexts[i], pid)
+            util.yield()
+        end
+        util.yield()
+    end
+end)
+
+menu.action(ap_texts_root, "Spam random texts", {"spamlabels"}, "very toxic", function(on)
+    for k,pid in pairs(players.list(false, true, true)) do
+        for i=1, 1000 do
+            send_player_label_sms(all_labels[math.random(1, #all_labels)], pid)
+            util.yield()
+        end
+        util.yield()
+    end
+end)
 kicktryhardnames = false
 menu.toggle(online_root, "Auto-crash/kick tryhard names", {"kicktryhardnames"}, "Crashes, then kicks (for if the crash didn\'t succeed) those losers with only L\'s and I\'s in their name, in such a way that makes them hard to report. Fuck them.", function(on)
     kicktryhardnames = on
@@ -2999,27 +3071,27 @@ menu.slider(online_root, "Auto-kick KD threshold", {"autokickkd"}, "Threshold pl
     kdthres = 6
   end)
 
-menu.action(apnaughty_root, "Toast best mug target", {"best mug"}, "Toasts you the player with the most wallet money, so you can mug them nicely.", function(on_click)
+menu.action(aphostile_root, "Toast best mug target", {"best mug"}, "Toasts you the player with the most wallet money, so you can mug them nicely.", function(on_click)
     local ret = get_best_mug_target()
     if ret ~= nil then
         util.toast(ret)
     end
 end)
 
-menu.action(apnaughty_root, "Announce best mug target", {"best mug"}, "Announces the player with the most wallet money, so people can mug them nicely.", function(on_click)
+menu.action(aphostile_root, "Announce best mug target", {"best mug"}, "Announces the player with the most wallet money, so people can mug them nicelyy.", function(on_click)
     local ret = get_best_mug_target()
     if ret ~= nil then
         chat.send_message(ret, false, true, true)
     end
 end)
 
-menu.action(apnaughty_root, "Announce poorest player", {"poorestplayer"}, "Announces the player with the least bank and wallet money.", function(on_click)
+menu.action(aphostile_root, "Announce poorest player", {"poorestplayer"}, "Announces the player with the least bank and wallet money.", function(on_click)
     local ret = get_poorest_player()
     if ret ~= nil then
         chat.send_message(ret, false, true, true)
     end
 end)
-menu.action(apnice_root, "Announce richest player", {"richestplayer"}, "Announces the player with the most bank and wallet money.", function(on_click)
+menu.action(apfriendly_root, "Announce richest player", {"richestplayer"}, "Announces the player with the most bank and wallet money.", function(on_click)
     local ret = get_richest_player()
     if ret ~= nil then
         chat.send_message(ret, false, true, true)
