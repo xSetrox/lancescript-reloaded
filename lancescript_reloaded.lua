@@ -913,7 +913,9 @@ menu.toggle_loop(silent_aimbotroot, "Silent aimbot", {"saimbottoggle"}, "Turn si
         --local t_pos = ENTITY.GET_ENTITY_COORDS(target, true)
         local t_pos = PED.GET_PED_BONE_COORDS(target, 31086, 0.01, 0, 0)
         local t_pos2 = PED.GET_PED_BONE_COORDS(target, 31086, -0.01, 0, 0.00)
-        util.draw_ar_beacon(t_pos)
+        if sa_showtarget then
+            util.draw_ar_beacon(t_pos)
+        end
         if PED.IS_PED_SHOOTING(players.user_ped()) then
             local wep = WEAPON.GET_SELECTED_PED_WEAPON(players.user_ped())
             local dmg = WEAPON.GET_WEAPON_DAMAGE(wep, 0)
@@ -964,6 +966,11 @@ sa_odmg = 100
 menu.slider(silent_aimbotroot, "Damage override amount", {"saimbotdamageoverride"}, "", 1, 1000, 100, 1, function(s)
     sa_odmg = s
 end)
+
+sa_showtarget = false
+menu.toggle(silent_aimbotroot, "Display target", {"saimbotshowtarget"}, "Whether or not to draw an AR beacon on who your aimbot will hit.", function(on)
+    sa_showtarget = on
+end, true)
 --
 
 local start_tint
