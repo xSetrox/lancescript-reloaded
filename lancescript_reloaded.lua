@@ -705,39 +705,34 @@ v_f_previous_car = 0
 fly_speed = 10
 v_fly = false
 v_f_plane = 0
-local ls_vehiclefly = menu.toggle(my_vehicle_movement_root, "Vehicle fly", {"vehiclefly"}, "Makes your vehicle fly. Flies just like a plane.. suspicious really.", function(on)
-    if on then
-        if player_cur_car == 0 then
-            util.toast("You are not in a car. Enter a car before enabling this.")
-            menu.set_value(ls_vehiclefly, false)
-        else
-            v_fly = true
-            v_f_previous_car = player_cur_car
-            local vehicle_model = util.joaat("alphaz1")
-            request_model_load(vehicle_model)
-            local c = ENTITY.GET_ENTITY_COORDS(player_cur_car, false)
-            v_f_plane = entities.create_vehicle(vehicle_model, c, ENTITY.GET_ENTITY_HEADING(player_cur_car))
-            local angs = ENTITY.GET_ENTITY_ROTATION(v_f_previous_car, 0)
-            ENTITY.SET_ENTITY_ROTATION(v_f_plane, angs.x, angs.y, angs.z, 0, true)
-            local vehicle_vel = ENTITY.GET_ENTITY_VELOCITY(v_f_previous_car)
-            ENTITY.SET_ENTITY_VELOCITY(v_f_plane, vehicle_vel.x, vehicle_vel.y, vehicle_vel.z)
-            ENTITY.SET_ENTITY_INVINCIBLE(v_f_plane, true)
-            AUDIO._FORCE_VEHICLE_ENGINE_AUDIO(v_f_plane, "ADDER")
-            ENTITY.ATTACH_ENTITY_TO_ENTITY(v_f_previous_car, v_f_plane, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, false, false, false, false, 0, true)
-            ENTITY.SET_ENTITY_COMPLETELY_DISABLE_COLLISION(obj, false, true)
-            ENTITY.SET_ENTITY_ALPHA(v_f_plane, 0)
-            PED.SET_PED_INTO_VEHICLE(players.user_ped(), v_f_plane, -1)
-            VEHICLE.SET_HELI_BLADES_FULL_SPEED(v_f_plane)
+
+local ls_vehiclefly = menu.toggle_loop(my_vehicle_movement_root, "Vehicle fly", {"vehiclefly"}, "Makes your vehicle fly. WASD as usual, mouse to aim, space and ctrl to ascend and descend", function(on)
+    if player_cur_car ~= 0 and PED.IS_PED_IN_ANY_VEHICLE(players.user_ped(), true) then
+        --SET_ENTITY_ROTATION(Entity entity, float pitch, float roll, float yaw, int rotationOrder, BOOL p5)
+        local c = CAM.GET_GAMEPLAY_CAM_ROT(0)
+        CAM._DISABLE_VEHICLE_FIRST_PERSON_CAM_THIS_FRAME()
+        ENTITY.SET_ENTITY_ROTATION(player_cur_car, c.x, c.y, c.z, 0, true)
+        --W
+        if PAD.IS_CONTROL_PRESSED(32, 32) then
+            ENTITY.APPLY_FORCE_TO_ENTITY(player_cur_car, 3, 0.0, 100.0, 0.0, 0.0, 0.0, 0.0, 0, true, true, true, false, true)
+        end 
+        --A
+        if PAD.IS_CONTROL_PRESSED(63, 63) then
+            ENTITY.APPLY_FORCE_TO_ENTITY(player_cur_car, 3, -20.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, true, true, true, false, true)
         end
-    else
-        if v_f_previous_car ~= 0 then
-            PED.SET_PED_INTO_VEHICLE(players.user_ped(), v_f_previous_car, -1)
-            ENTITY.DETACH_ENTITY(v_f_previous_car, true, true)
-            -- sometimes runs if the plane doesnt exist??
-            if v_f_plane ~= 0 then
-                entities.delete(v_f_plane)
-            end
-            v_fly = false
+        --S
+        if PAD.IS_CONTROL_PRESSED(33, 33) then
+            ENTITY.APPLY_FORCE_TO_ENTITY(player_cur_car, 3, 0.0, -50.0, 0.0, 0.0, 0.0, 0.0, 0, true, true, true, false, true)
+        end
+        --D
+        if PAD.IS_CONTROL_PRESSED(64, 64) then
+            ENTITY.APPLY_FORCE_TO_ENTITY(player_cur_car, 3, 20.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, true, true, true, false, true)
+        end
+        if PAD.IS_CONTROL_PRESSED(22, 22) then
+            ENTITY.APPLY_FORCE_TO_ENTITY(player_cur_car, 3, 0.0, 0.0, 50.0, 0.0, 0.0, 0.0, 0, true, true, true, false, true)
+        end
+        if PAD.IS_CONTROL_PRESSED(36, 36) then
+            ENTITY.APPLY_FORCE_TO_ENTITY(player_cur_car, 3, 0.0, 0.0, -50.0, 0.0, 0.0, 0.0, 0, true, true, true, false, true)
         end
     end
 end)
@@ -747,6 +742,37 @@ end)
 menu.action(my_vehicle_root, "Force leave vehicle", {"forceleaveveh"}, "Force leave vehicle, in case of emergency or stuckedness", function(on_click)
     TASK.CLEAR_PED_TASKS_IMMEDIATELY(players.user_ped())
     TASK.TASK_LEAVE_ANY_VEHICLE(players.user_ped(), 0, 16)
+end)
+
+menu.click_slider(my_vehicle_root, "Stack vertically", {"stackvehvert"}, "", 1, 10, 3, 1, function(s)
+    if player_cur_car ~= 0 then
+        old_veh = player_cur_car
+        for i=1, s do
+            local c = ENTITY.GET_ENTITY_COORDS(old_veh, false)
+            local mdl = ENTITY.GET_ENTITY_MODEL(player_cur_car)
+            local size = get_model_size(mdl)
+            local r = ENTITY.GET_ENTITY_ROTATION(old_veh, 0)
+            new_veh = entities.create_vehicle(mdl, ENTITY.GET_ENTITY_COORDS(players.user_ped(), true), ENTITY.GET_ENTITY_HEADING(old_veh))
+            ENTITY.ATTACH_ENTITY_TO_ENTITY(new_veh, old_veh, 0, 0.0, 0.0, size.z, 0.0, 0.0, 0.0, true, false, false, false, 0, true)
+            old_veh = new_veh
+        end
+    end
+end)
+
+menu.click_slider(my_vehicle_root, "Stack horizontally", {"stackvehhoriz"}, "", 1, 10, 3, 1, function(s)
+    if player_cur_car ~= 0 then
+        for i=1, s do
+            main_veh = player_cur_car
+            local c = ENTITY.GET_ENTITY_COORDS(main_veh, false)
+            local mdl = ENTITY.GET_ENTITY_MODEL(main_veh)
+            local size = get_model_size(mdl)
+            local r = ENTITY.GET_ENTITY_ROTATION(main_veh, 0)
+            left_new = entities.create_vehicle(mdl, ENTITY.GET_ENTITY_COORDS(players.user_ped(), true), ENTITY.GET_ENTITY_HEADING(main_veh))
+            ENTITY.ATTACH_ENTITY_TO_ENTITY(left_new, main_veh, 0, -size.x*i, 0.0, 0.0, 0.0, 0.0, 0.0, true, false, false, false, 0, true)
+            right_new = entities.create_vehicle(mdl, ENTITY.GET_ENTITY_COORDS(players.user_ped(), true), ENTITY.GET_ENTITY_HEADING(main_veh))
+            ENTITY.ATTACH_ENTITY_TO_ENTITY(right_new, main_veh, 0, size.x*i, 0.0, 0.0, 0.0, 0.0, 0.0, true, false, false, false, 0, true)
+        end
+    end
 end)
 
 cinematic_autod = false
@@ -1164,16 +1190,6 @@ peds_thread = util.create_thread(function (thr)
                     end
 
                     -- ONLINE INTERACTIONS
-                    if ped_chase then
-                        if PED.IS_PED_IN_ANY_VEHICLE(ped) then
-                            PED.SET_PED_COMBAT_ATTRIBUTES(ped, 5, true)
-                            PED.SET_PED_COMBAT_ATTRIBUTES(ped, 46, true)
-                            TASK.SET_TASK_VEHICLE_CHASE_IDEAL_PURSUIT_DISTANCE(ped, 0.0)
-                            TASK.SET_TASK_VEHICLE_CHASE_BEHAVIOR_FLAG(ped, 1, true)
-                            TASK.TASK_COMBAT_PED(ped, chase_target, 0, 16)
-                            TASK.TASK_VEHICLE_CHASE(ped, PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(chase_target))
-                        end
-                    end
                     if aped_combat then
                         local tar = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(combat_tar)
                         if not PED.IS_PED_IN_COMBAT(ped, tar) then 
@@ -2062,6 +2078,8 @@ function send_attacker(hash, pid, givegun)
     request_model_load(hash)
     for i=1, num_attackers do
         local attacker = entities.create_ped(28, hash, coords, math.random(0, 270))
+        local blip = HUD.ADD_BLIP_FOR_ENTITY(attacker)
+        HUD.SET_BLIP_COLOUR(blip, 61)
         if godmodeatk then
             ENTITY.SET_ENTITY_INVINCIBLE(attacker, true)
         end
@@ -2100,6 +2118,8 @@ function send_aircraft_attacker(vhash, phash, pid)
         end
         for i= -1, VEHICLE.GET_VEHICLE_MODEL_NUMBER_OF_SEATS(vhash) - 2 do
             local ped = entities.create_ped(28, phash, coords, 30.0)
+            local blip = HUD.ADD_BLIP_FOR_ENTITY(ped)
+            HUD.SET_BLIP_COLOUR(blip, 61)
             if i == -1 then
                 TASK.TASK_PLANE_MISSION(ped, aircraft, 0, target_ped, 0, 0, 0, 6, 0.0, 0, 0.0, 50.0, 40.0)
             end
@@ -2126,6 +2146,8 @@ function send_groundv_attacker(vhash, phash, pid, givegun)
         local bike = entities.create_vehicle(vhash, spawn_pos, ENTITY.GET_ENTITY_HEADING(player_ped))
         for i=-1, VEHICLE.GET_VEHICLE_MODEL_NUMBER_OF_SEATS(vhash) - 2 do
             local rider = entities.create_ped(1, phash, spawn_pos, 0.0)
+            local blip = HUD.ADD_BLIP_FOR_ENTITY(rider)
+            HUD.SET_BLIP_COLOUR(blip, 61)
             if i == -1 then
                 TASK.TASK_VEHICLE_CHASE(rider, target_ped)
             end
@@ -2742,33 +2764,7 @@ function set_up_player_actions(pid)
     end)
 
     menu.action(attackers_root, "Send jets", {"sendjets"}, "We don\'t charge $140 for this extremely basic feature. However the jets will only target the player until the player dies, otherwise we would need another thread, and I don\'t want to make one.", function(on_click)
-        local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
-        coords = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(target_ped, 1.0, 0.0, 500.0)
-        coords.x = coords['x']
-        coords.y = coords['y']
-        coords.z = coords['z']
-        local hash = util.joaat("lazer")
-        request_model_load(hash)
-        request_model_load(-163714847)
-        for i=1, num_attackers do
-            coords.x = coords.x + i*2
-            coords.y = coords.y + i*2
-            local jet = entities.create_vehicle(hash, coords, 0.0)
-            VEHICLE.CONTROL_LANDING_GEAR(jet, 3)
-            VEHICLE.SET_HELI_BLADES_FULL_SPEED(jet)
-            VEHICLE.SET_VEHICLE_FORWARD_SPEED(jet, VEHICLE.GET_VEHICLE_ESTIMATED_MAX_SPEED(jet))
-            if godmodeatk then
-                ENTITY.SET_ENTITY_INVINCIBLE(jet, true)
-            end
-            local pilot = entities.create_ped(28, -163714847, coords, 30.0)
-            PED.SET_PED_COMBAT_ATTRIBUTES(pilot, 5, true)
-            PED.SET_PED_COMBAT_ATTRIBUTES(pilot, 46, true)
-            PED.SET_PED_INTO_VEHICLE(pilot, jet, -1)
-            TASK.TASK_PLANE_MISSION(pilot, jet, 0, target_ped, 0, 0, 0, 6, 0.0, 0, 0.0, 50.0, 40.0)
-            TASK.TASK_COMBAT_PED(pilot, target_ped, 0, 16)
-            PED.SET_PED_ACCURACY(pilot, 100.0)
-            PED.SET_PED_COMBAT_ABILITY(pilot, 2)
-        end
+        send_aircraft_attacker(util.joaat('lazer'), -163714847, pid)
     end)
     
     menu.action(attackers_root, "Send A10s", {"senda10s"}, "literally just a model swap of the send jets why would u want this", function(on_click)
@@ -2921,7 +2917,39 @@ function set_up_player_actions(pid)
             util.yield(5)
         end
         entities.delete(lifter)
-    end)    
+    end)
+
+
+    menu.action(ls_hostile, "Send schizo message", {"schizomessage"}, "Sends them a chat message that looks normal, but only they can see it. Makes them look schizophrenic if they respond.", function(on_click)
+        util.toast("Please input the chat")
+        menu.show_command_box("schizomessage" .. PLAYER.GET_PLAYER_NAME(pid) .. " ")
+        end, function(on_command)
+            if #on_command > 140 then
+                util.toast("Chat too long :(")
+            else
+                chat.send_targeted_message(pid, players.user(), on_command, false)
+                util.toast("Schizo message sent!")
+            end
+    end)
+
+    
+    menu.action(ls_hostile, "Invisible spoof chat", {"invisspoof"}, "Send a text spoofing as this player, but the player won\'t see it so they wont know they\'re spoofed.", function(on_click)
+        util.toast("Please input what you want this user to say")
+        menu.show_command_box("invisspoof" .. PLAYER.GET_PLAYER_NAME(pid) .. " ")
+    end, function(on_command)
+        if #on_command > 140 then
+            util.toast("Message length too long :(")
+        else
+            for k,iter_pid in pairs(players.list(true, true, true)) do
+                if iter_pid ~= pid then
+                    chat.send_targeted_message(iter_pid, pid, on_command, false)
+                end
+            end
+        end
+    end)
+
+
+    --ba_prop_club_glass_trans
     
     menu.action(texts_root, "Send nudes", {"sendnudes"}, ";)", function(on_click)
         for i=1, #sexts do
@@ -2973,13 +3001,8 @@ function set_up_player_actions(pid)
 
     menu.toggle(npctrolls_root, "Nearby peds combat player", {"combat"}, "Tells nearby peds to combat the player.", function(on)
         combat_tar = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
-        if on then
-            aped_combat = true
-            mod_uses("ped", 1)
-        else
-            aped_combat = false
-            mod_uses("ped", -1)
-        end
+        aped_combat = on
+        mod_uses("ped", if on then 1 else -1)
     end)
 
     menu.action(npctrolls_root, "Fill car with peds", {"fillcar"}, "Fills the player\'s car with nearby peds", function(on_click)
@@ -3034,11 +3057,6 @@ function set_up_player_actions(pid)
         end
     end)
     
-    menu.toggle(npctrolls_root, "Nearby traffic chases player", {"pedchase"}, "", function(on)
-        ped_chase = on
-        mod_uses("ped", if on then 1 else -1)
-    end, false)
-
     menu.action(attackers_root, "Clown attack", {"clownattack"}, "Sends clowns to attack the player", function(on_click)
         local player_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         local clown_hash = 71929310
@@ -3152,6 +3170,23 @@ menu.toggle(ap_root, "Delete armed vehicles", {"noarmedvehs"}, "Deletes any vehi
     mod_uses("player", if on then 1 else -1)
 end)
 
+
+menu.action(aphostile_root, "Mass spoof chat", {"masschat"}, "Send a text spoofing as everyone in the session", function(on_click)
+    util.toast("Please input what you want everyone to say")
+    menu.show_command_box("masschat ")
+end, function(on_command)
+    if #on_command > 140 then
+        util.toast("Message length too long :(")
+    else
+        for k,pid1 in pairs(players.list(false, true, true)) do
+            for k,pid2 in pairs(players.list(true, true, true)) do
+                chat.send_targeted_message(pid2, pid1, on_command, false)
+            end
+        end
+    end
+end)
+
+
 menu.action(ap_texts_root, "Send nudes", {"sendnudes"}, ";)", function(on_click)
     for k,pid in pairs(players.list(false, true, true)) do
         for i=1, #sexts do
@@ -3235,6 +3270,7 @@ end)
 
 show_voicechatters = false
 menu.toggle(online_root, "Show me who\'s using voicechat", {"showvoicechat"}, "Shows who is actually using GTA:O voice chat, in 2021. Which is likely to be nobody. So this is a bitch to test. but.", function(on)
+    show_voicechatters = on
     mod_uses("player", if on then 1 else -1)
 end)
 
@@ -3290,7 +3326,7 @@ players_thread = util.create_thread(function (thr)
             if show_updates then
                 util.toast("Player pool is being updated")
             end
-            all_players = players.list(false, true, true)
+            all_players = players.list(true, true, true)
             for k,pid in pairs(all_players) do
                 if protected_areas_on then
                     for k,v in pairs(protected_areas) do
@@ -3390,15 +3426,15 @@ is_loading = false
 -- ON CHAT HOOK
 chat.on_message(function(packet_sender, message_sender, text, team_chat)
     AUDIO.PLAY_SOUND(-1, "End_Squelch", "CB_RADIO_SFX", 0, 0, 1)
-    if receive_lancechats then
+    if receive_lancechats and not team_chat then
         if string.sub(text, 1, 4) == '[LC]' then
             decoded = string.gsub(text, '[LC]', '')
             decoded = b64_dec(decoded)
-            --util.toast('[LC] ' .. PLAYER.GET_PLAYER_NAME(message_sender) .. ': \"' .. decoded .. '\"')
-            chat.send_targeted_message(packet_sender, message_sender, '[LC] ' .. decoded, true)
+            util.toast('[LC] ' .. PLAYER.GET_PLAYER_NAME(message_sender) .. ': \"' .. decoded .. '\"')
         end
     end
 end)
+
 -- ## MAIN TICK LOOP ## --
 while true do
     for k,v in pairs(ped_flags) do
