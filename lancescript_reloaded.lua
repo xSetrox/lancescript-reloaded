@@ -86,6 +86,7 @@ combat_root = menu.list(self_root, "My combat/weapons", {"lancescriptcombat"}, "
 -- END SELF SUBSECTIONS
 -- BEGIN ONLINE SUBSECTIONS
 online_root = menu.list(menu.my_root(), "Online", {"lancescriptonline"}, "Online")
+protections_root = menu.list(online_root, "Protections", {"lancescriptprotections"}, "Protections")
 lancechat_root = menu.list(online_root, "LanceChat", {"lancechat"}, "A \"secret\" chat for LanceScript owners. Utilizes normal chat to send encoded messages. It is like base64 but not quite. This is not the same as \"encrypted\" so don\'t be an idiot.")
 
 local players_shortcut_command = menu.ref_by_path('Players', 37)
@@ -110,10 +111,11 @@ world_root = menu.list(menu.my_root(), "World", {"lancescriptworld"}, "World opt
 tweaks_root = menu.list(menu.my_root(), "Game tweaks", {"lancescriptpickups"}, "Tweaks to pimp out your game")
 lancescript_root = menu.list(menu.my_root(), "Misc", {"lancescriptoptions"}, "")
 async_http.init("pastebin.com", "/raw/nrMdhHwE", function(result)
-    menu.hyperlink(menu.my_root(), "Join discord", result, "")
+    menu.hyperlink(menu.my_root(), "Join Discord", result, "")
 end)
 async_http.dispatch()
 
+menu.hyperlink(menu.my_root(), "Join Signal", "https://signal.group/#CjQKIFZy7rp4BeG290ycNsEobcX-5LVIObPZeP0JHdmTUwvAEhBDSCZP36nJGWtQ2-75O75j", "")
 -- entity-pool gathering handling
 vehicle_uses = 0
 ped_uses = 0
@@ -204,6 +206,11 @@ end, function(on_command)
     else
         chat.send_message(encoded_string, false, true, true)
     end
+end)
+
+friendtect = false
+menu.toggle(protections_root, "Friendtect", {"friendtect"}, "Automatically kill people who kill your friends, including NPC\'s.", function(on)
+    friendtect = on
 end)
 
 receive_lancechats = true
@@ -744,6 +751,12 @@ menu.action(my_vehicle_root, "Force leave vehicle", {"forceleaveveh"}, "Force le
     TASK.TASK_LEAVE_ANY_VEHICLE(players.user_ped(), 0, 16)
 end)
 
+menu.click_slider(my_vehicle_root, "Set dirt level", {"setdirtlevel"}, "", 0, 15, 0, 1, function(s)
+    if player_cur_car ~= 0 then
+        VEHICLE.SET_VEHICLE_DIRT_LEVEL(player_cur_car, s)
+    end
+end)
+
 menu.click_slider(my_vehicle_root, "Stack vertically", {"stackvehvert"}, "", 1, 10, 3, 1, function(s)
     if player_cur_car ~= 0 then
         old_veh = player_cur_car
@@ -753,7 +766,7 @@ menu.click_slider(my_vehicle_root, "Stack vertically", {"stackvehvert"}, "", 1, 
             local size = get_model_size(mdl)
             local r = ENTITY.GET_ENTITY_ROTATION(old_veh, 0)
             new_veh = entities.create_vehicle(mdl, ENTITY.GET_ENTITY_COORDS(players.user_ped(), true), ENTITY.GET_ENTITY_HEADING(old_veh))
-            ENTITY.ATTACH_ENTITY_TO_ENTITY(new_veh, old_veh, 0, 0.0, 0.0, size.z, 0.0, 0.0, 0.0, true, false, false, false, 0, true)
+            ENTITY.ATTACH_ENTITY_TO_ENTITY(new_veh, old_veh, 0, 0.0, 0.0, size.z, 0.0, 0.0, 0.0, true, false, falsmy_e, false, 0, true)
             old_veh = new_veh
         end
     end
@@ -1065,10 +1078,10 @@ menu.toggle_loop(weapons_root, "Rainbow weapon tint", {"rainbowtint"}, "boogie",
     if start_tint == nil then
         start_tint = WEAPON.GET_PED_WEAPON_TINT_INDEX(plyr, WEAPON.GET_SELECTED_PED_WEAPON(plyr))
         cur_tint = start_tint
-        cur_tint = if cur_tint == 8 then 0 else cur_tint + 1
-        WEAPON.SET_PED_WEAPON_TINT_INDEX(plyr,WEAPON.GET_SELECTED_PED_WEAPON(plyr), cur_tint)
-        util.yield(50)
     end
+    cur_tint = if cur_tint == 8 then 0 else cur_tint + 1
+    WEAPON.SET_PED_WEAPON_TINT_INDEX(plyr,WEAPON.GET_SELECTED_PED_WEAPON(plyr), cur_tint)
+    util.yield(50)
 end, function()
         WEAPON.SET_PED_WEAPON_TINT_INDEX(players.user_ped(),WEAPON.GET_SELECTED_PED_WEAPON(players.user_ped()), start_tint)
         start_tint = nil
@@ -1229,7 +1242,54 @@ function spawn_ped(hash)
 end
 
 spawn_animals_root = menu.list(spawn_peds_root, "Animals", {"lancescriptspawnpedsanimals"}, "Spawn them")
+spawn_pets_root = menu.list(spawn_peds_root, "Pets", {"lancescriptspawnpets"}, "uwu")
 
+all_pets = {}
+function spawn_pet(hash)
+    request_model_load(hash)
+    local c = ENTITY.GET_ENTITY_COORDS(players.user_ped(), false)
+    local pet = entities.create_ped(28, hash, c, 0)
+    all_pets[#all_pets + 1] = pet
+    ENTITY.SET_ENTITY_INVINCIBLE(pet, true)
+    PED.SET_PED_COMPONENT_VARIATION(pet, 0, 0, 2, 0)
+    TASK.TASK_FOLLOW_TO_OFFSET_OF_ENTITY(pet, players.user_ped(), 0, -1, 0, 7.0, -1, 1, true)
+    PED.SET_PED_COMBAT_ABILITY(pet, 0)
+    PED.SET_PED_FLEE_ATTRIBUTES(pet, 0, true)
+    PED.SET_PED_COMBAT_ATTRIBUTES(pet, 46, false)
+    local blip = HUD.ADD_BLIP_FOR_ENTITY(pet)
+    HUD.SET_BLIP_COLOUR(blip, 11)
+end
+
+menu.action(spawn_pets_root, "Binx", {"spawnpetbinx"}, "Jinx\'s lesser-known evil cousin", function(on_click)
+    spawn_pet(util.joaat("a_c_retriever"))
+end)
+
+menu.action(spawn_pets_root, "Richard", {"spawnpetcock"}, ";)", function(on_click)
+    spawn_pet(util.joaat("a_c_hen"))
+end)
+
+menu.action(spawn_pets_root, "Charlie", {"spawnpetdeer"}, "deer god..", function(on_click)
+    spawn_pet(util.joaat("a_c_deer"))
+end)
+
+menu.action(spawn_pets_root, "Rosanne", {"spawnpetcow"}, "doja cat moo", function(on_click)
+    spawn_pet(util.joaat("a_c_cow"))
+end)
+
+menu.action(spawn_pets_root, "Bailey", {"spawnpetrabbit"}, "uwu", function(on_click)
+    spawn_pet(util.joaat("a_c_rabbit_01"))
+end)
+
+menu.action(spawn_pets_root, "Princess", {"spawnpetprincess"}, "your little pussy belongs to me", function(on_click)
+    spawn_pet(util.joaat("a_c_cat_01"))
+end)
+
+menu.action(spawn_pets_root, "Input hash", {"inputpetspawnhash"}, "Spawn whatever you want", function(on_click)
+    util.toast("Please input the model hash (should be a string)")
+    menu.show_command_box("inputpetspawnhash ")
+end, function(on_command)
+    spawn_pet(util.joaat(on_command))
+end)
 
 menu.action(spawn_peds_root, "Input hash", {"inputpedspawnhash"}, "Spawn whatever you want", function(on_click)
     util.toast("Please input the model hash (should be a string)")
@@ -2448,9 +2508,7 @@ function set_up_player_actions(pid)
             ENTITY.SET_ENTITY_MAX_SPEED(car, speed)
         end
     end)
-
     --SET_VEHICLE_ALARM(Vehicle vehicle, BOOL state)
-
 
     menu.action(playerveh_root, "Burst tires", {"bursttiresv"}, "", function(on)
         local car = PED.GET_VEHICLE_PED_IS_IN(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid), true)
@@ -2855,12 +2913,27 @@ function set_up_player_actions(pid)
         FIRE.ADD_EXPLOSION(coords['x'], coords['y'], coords['z'], math.random(0, 82), 1.0, true, false, 0.0)
     end)
 
+    menu.action(explosions_root, "Snowball", {"snowball"}, "More annoying than useful.", function(on)
+        --126349499
+        local owner = players.user_ped()
+        local target = ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid))
+        WEAPON.REQUEST_WEAPON_ASSET(126349499)
+        MISC.SHOOT_SINGLE_BULLET_BETWEEN_COORDS(target['x'], target['y'], target['z']-0.5, target['x'], target['y'], target['z']-0.4, 100, true, 126349499, owner, true, false, 4000.0)
+    end)
+
+    menu.toggle_loop(explosions_root, "Snowball loop", {"snowballloop"}, "More annoying than useful.", function(on)
+        --126349499
+        local owner = players.user_ped()
+        local target = ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid))
+        WEAPON.REQUEST_WEAPON_ASSET(126349499)
+        MISC.SHOOT_SINGLE_BULLET_BETWEEN_COORDS(target['x'], target['y'], target['z'], target['x'], target['y'], target['z']-0.5, 100, true, 126349499, owner, true, false, 4000.0)
+    end)
 
     menu.action(ls_hostile, "Drop anon stickybomb", {"anonsticky"}, "Stubborn, but works when it works.", function(on_click)
         local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         local target = ENTITY.GET_ENTITY_COORDS(target_ped)
         local random_ped = get_random_ped()
-        MISC.SHOOT_SINGLE_BULLET_BETWEEN_COORDS(target['x'], target['y'], target['z'], target['x'], target['y'], target['z']-1.0, 300.0, true, 741814745, random_ped, true, false, 100.0)
+        MISC.SHOOT_SINGLE_BULLET_BETWEEN_COORDS(target['x'], target['y'], target['z']+1, target['x'], target['y'], target['z'], 300.0, true, 741814745, random_ped, true, false, 100.0)
     end)
 
     --SET_VEHICLE_WHEEL_HEALTH(Vehicle vehicle, int wheelIndex, float health)
@@ -2919,6 +2992,13 @@ function set_up_player_actions(pid)
         entities.delete(lifter)
     end)
 
+    menu.toggle_loop(ls_hostile, "Earrape", {"earrape"}, "Ouch. May trigger crash detections.", function(on_click)
+        local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
+        for i = 1, 20 do
+            AUDIO.PLAY_SOUND_FROM_ENTITY(-1, "Bed", ped, "WastedSounds", true, true)
+        end
+        util.yield(500)
+    end)
 
     menu.action(ls_hostile, "Send schizo message", {"schizomessage"}, "Sends them a chat message that looks normal, but only they can see it. Makes them look schizophrenic if they respond.", function(on_click)
         util.toast("Please input the chat")
@@ -3152,6 +3232,13 @@ menu.toggle(aphostile_root, "Broke radar", {"brokeradar"}, "Shows players who ar
     end
 end)
 
+earrape_all = false
+menu.toggle(aphostile_root, "Earrape", {"earrapeall"}, "May trigger crash detections.", function(on)
+    earrape_all = on
+    mod_uses("player", if on then 1 else -1)
+end)
+
+
 broke_threshold = 1000000
 menu.slider(aphostile_root, "Broke threshold", {"brokethresh"}, "How much money a user must have to not be considered broke by the broke radar.", 100000, 1000000000, 1000000, 100000, function(s)
     broke_threshold = s
@@ -3185,7 +3272,6 @@ end, function(on_command)
         end
     end
 end)
-
 
 menu.action(ap_texts_root, "Send nudes", {"sendnudes"}, ";)", function(on_click)
     for k,pid in pairs(players.list(false, true, true)) do
@@ -3259,6 +3345,18 @@ menu.action(aphostile_root, "Kick all non-friends", {"kicknonfriends"}, "If peop
     end
 end)
 
+infibounty_amt = 10000
+menu.slider(aphostile_root, "Infibounty amount", {"infibountyamt"}, "", 0, 10000, 10000, 1, function(s)
+    infibounty_amt = s
+  end)
+
+
+menu.toggle_loop(aphostile_root, "Infibounty", {"infibounty"}, "Repeatedly places max bounty on everyone.", function(on_click)
+    menu.trigger_commands("bountyall " .. tostring(infibounty_amt))
+    util.yield(60000)
+end)
+
+
 menu.action(apfriendly_root, "Announce richest player", {"richestplayer"}, "Announces the player with the most bank and wallet money.", function(on_click)
     local ret = get_richest_player()
     if ret ~= nil then
@@ -3320,14 +3418,46 @@ players.on_leave(function(pid)
 end)
 
 
+
 players_thread = util.create_thread(function (thr)
     while true do
         if player_uses > 0 then
             if show_updates then
                 util.toast("Player pool is being updated")
             end
-            all_players = players.list(true, true, true)
+            all_players = players.list(false, true, true)
             for k,pid in pairs(all_players) do
+                if friendtect then
+                    local hdl = pid_to_handle(pid)
+                    local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
+                    -- check if player is dead, and player is our friend
+                    if ENTITY.IS_ENTITY_DEAD(ped) and NETWORK.NETWORK_IS_FRIEND(hdl) then
+                        -- did player die just 1 second (or so..) ago?
+                        if MISC.GET_GAME_TIMER() - PED.GET_PED_TIME_OF_DEATH(ped) <= 1 then
+                            local killer = PED.GET_PED_SOURCE_OF_DEATH(ped)
+                            if ENTITY.IS_ENTITY_A_PED(killer) then
+                                if PLAYER.IS_PED_A_PLAYER(killer) then
+                                    local plyr = NETWORK.NETWORK_GET_PLAYER_INDEX_FROM_PED(killer)
+                                    local killer_hdl = pid_to_handle(killer)
+                                    -- allow friends to kill other friends
+                                    if plyr ~= 0 and ped ~= killer and not NETWORK.NETWORK_IS_FRIEND(killer_hdl) then
+                                        local name = PLAYER.GET_PLAYER_NAME(plyr)
+                                        menu.trigger_commands("kill" .. name)
+                                    end
+                                else
+                                    -- if they a ped, kill them
+                                    ENTITY.SET_ENTITY_HEALTH(killer, 0.0)
+                                end
+                            end
+                        end
+                    end
+                end
+                if earrape_all then
+                    local this_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
+                    for i = 1, 20 do
+                        AUDIO.PLAY_SOUND_FROM_ENTITY(-1, "Bed", this_ped, "WastedSounds", true, true)
+                    end
+                end
                 if protected_areas_on then
                     for k,v in pairs(protected_areas) do
                         local c = ENTITY.GET_ENTITY_COORDS(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid), false)
@@ -3418,8 +3548,8 @@ end, false)
 
 -- CREDITS
 lancescript_credits = menu.list(lancescript_root, "Credits", {"lancescriptcredits"}, "")
-menu.action(lancescript_credits, "Jerrrry123", {}, "Creating a (accepted) PR that optimized LanceScript and cut down on code, also fixed and improved some features.", function(on_click) end)
-
+menu.action(lancescript_credits, "Jerrrry123", {}, "Creating a (accepted) PR that optimized LanceScript and cut down on code, also fixed and improved some features. Thanks!", function(on_click) end)
+menu.action(lancescript_credits, "Millennium#0001", {}, "Sending a $10 fortnit- i mean amazon- gift card. Thanks!", function(on_click) end)
 -- SCRIPT IS "FINISHED LOADING"
 is_loading = false
 
