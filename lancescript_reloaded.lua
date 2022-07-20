@@ -217,7 +217,6 @@ function b64_enc(data)
         return b:sub(c+1,c+1)
     end)..({ '', '==', '=' })[#data%3+1])
 end
-util.copy_to_clipboard(b64_enc("bealone"), true)
 --https://stackoverflow.com/questions/34618946/lua-base64-encode
 
 -- decoding
