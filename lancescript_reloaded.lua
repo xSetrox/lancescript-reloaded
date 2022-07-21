@@ -1,4 +1,5 @@
 -- LANCESCRIPT RELOADED
+-- version 4.4.2, unless i forgot to update this line loll
 util.require_natives("1640181023")
 gta_labels = require('all_labels')
 all_labels = gta_labels.all_labels
@@ -13,7 +14,7 @@ all_peds = {}
 all_pickups = {}
 handle_ptr = memory.alloc(13*8)
 player_cur_car = 0
-good_guns = {453432689, 171789620, 487013001, -1716189206, 1119849093}
+good_guns = {0, 453432689, 171789620, 487013001, -1716189206, 1119849093}
 util_alloc = memory.alloc(8)
 
 
@@ -92,7 +93,7 @@ protections_root = menu.list(online_root, "Protections", {"lancescriptprotection
 lancechat_root = menu.list(online_root, "LanceChat", {"lancechat"}, "A \"secret\" chat for LanceScript owners. Utilizes normal chat to send encoded messages. It is like base64 but not quite. This is not the same as \"encrypted\" so don\'t be an idiot.")
 
 local players_shortcut_command = menu.ref_by_path('Players', 37)
-menu.action(menu.my_root(), "Players shortcut", {}, "Quickly opens session players list, for convenience", function(on_click)
+menu.action(menu.my_root(), "Players shortcut", {}, "Quickly opens session players list, for convenience", function(click_type)
     menu.trigger_command(players_shortcut_command)
 end)
 
@@ -233,7 +234,7 @@ function b64_dec(data)
     end))
 end
 
-menu.action(lancechat_root, "Send message", {"sendencodedmsg"}, "Send an encoded message that other LanceScript users will be able to decode. ", function(on_click)
+menu.action(lancechat_root, "Send message", {"sendencodedmsg"}, "Send an encoded message that other LanceScript users will be able to decode. ", function(click_type)
     util.toast("Enter your chat message")
     menu.show_command_box("sendencodedmsg ")
 end, function(on_command)
@@ -601,7 +602,7 @@ menu.toggle(self_root, "Walk on water", {"walkonwater"}, "no blasphemy permitted
 end)
 
 
-menu.action(self_root, "Set/unset custom ped flag", {"custompedflag"}, "Do not touch unless you know what you\'re doing. I mean you do you but if it crashes your game I don\'t wanna hear it.", function(on_click)
+menu.action(self_root, "Set/unset custom ped flag", {"custompedflag"}, "Do not touch unless you know what you\'re doing. I mean you do you but if it crashes your game I don\'t wanna hear it.", function(click_type)
     util.toast("Please input the flag int to use")
     menu.show_command_box("custompedflag ")
 end, function(on_command)
@@ -653,7 +654,7 @@ end)
 
 mph_unit = "kph"
 local unit_options = {'KPH', 'MPH'}
-menu.action_slider(speedometer_plate_root, "Speed unit", {"spunit"}, "", unit_options, function(index, value, click_type)
+menu.list_action(speedometer_plate_root, "Speed unit", {"spunit"}, "", unit_options, function(index, value, click_type)
     mph_unit = value
 end)
 
@@ -740,7 +741,7 @@ menu.toggle_loop(my_vehicle_movement_root, "Stick to ground/walls", {"stick2grou
     end
 end)
 
-menu.action(my_vehicle_movement_root, "Vehicle 180", {"vehicle180"}, "Turns your vehicle around with momentum preserved. Recommended to bind this.", function(on_click)
+menu.action(my_vehicle_movement_root, "Vehicle 180", {"vehicle180"}, "Turns your vehicle around with momentum preserved. Recommended to bind this.", function(click_type)
     if player_cur_car ~= 0 then
         local rot = ENTITY.GET_ENTITY_ROTATION(player_cur_car, 0)
         local vel = ENTITY.GET_ENTITY_VELOCITY(player_cur_car)
@@ -797,7 +798,7 @@ end)
 
 -- END MOVEMENT ROOT
 
-menu.action(my_vehicle_root, "Force leave vehicle", {"forceleaveveh"}, "Force leave vehicle, in case of emergency or stuckedness", function(on_click)
+menu.action(my_vehicle_root, "Force leave vehicle", {"forceleaveveh"}, "Force leave vehicle, in case of emergency or stuckedness", function(click_type)
     TASK.CLEAR_PED_TASKS_IMMEDIATELY(players.user_ped())
     TASK.TASK_LEAVE_ANY_VEHICLE(players.user_ped(), 0, 16)
 end)
@@ -844,7 +845,7 @@ menu.toggle(my_vehicle_root, "Cinematic auto-drive", {"cinematicautodrive"}, "Au
     cinematic_autod = on
 end)
 
-menu.action(my_vehicle_root, "Break rudder", {"breakrudder"}, "Breaks rudder. Good for stunts. Useless if you don\'t have an aircraft lol.", function(on_click)
+menu.action(my_vehicle_root, "Break rudder", {"breakrudder"}, "Breaks rudder. Good for stunts. Useless if you don\'t have an aircraft lol.", function(click_type)
     if player_cur_car ~= 0 then
         VEHICLE.SET_VEHICLE_RUDDER_BROKEN(player_cur_car, true)
     end
@@ -871,7 +872,7 @@ end)
 
 
 tesla_ped = 0
-menu.action(my_vehicle_root, "Tesla summon", {"teslasummon"}, "Have your car drive itself to you. Breaks a lot for multiple reasons but it was too fun to scrap.", function(on_click)
+menu.action(my_vehicle_root, "Tesla summon", {"teslasummon"}, "Have your car drive itself to you. Breaks a lot for multiple reasons but it was too fun to scrap.", function(click_type)
     lastcar = PLAYER.GET_PLAYERS_LAST_VEHICLE()
     if lastcar ~= 0 then
         local plyr = PLAYER.PLAYER_PED_ID()
@@ -979,7 +980,7 @@ end, "prop_tool_blowtorch")
 
 local entity_hashes = {-422877666, -717142483, util.joaat("prop_paints_can07")}
 local entity_options = {'Dildo', 'Soccer ball', 'Bucket', 'Custom'}
-menu.action_slider(entity_gun, "Entity", {"entitygunentity"}, "", entity_options, function(index, value, click_type)
+menu.list_action(entity_gun, "Entity", {"entitygunentity"}, "", entity_options, function(index, value, click_type)
     if index < 4 then
         shootent = entity_hashes[index]
     else
@@ -1352,7 +1353,7 @@ end, "a_c_retriever")
 
 local animal_hashes = {-1011537562, 802685111, util.joaat("a_c_chimp"), -1589092019, 1794449327, -664053099, -1920284487, util.joaat("a_c_retriever"), util.joaat("a_c_deer"), util.joaat('a_c_cow'), util.joaat("a_c_rabbit_01")}
 local animal_options = {'Rat', 'Fish', 'Chimp', 'Stingray', 'Hen', 'Deer', 'Killer Whale', 'Dog', 'Deer', 'Cow', 'Rabbit', 'Custom'}
-menu.action_slider(ped_spawn, "Spawn ped", {"spawnped"}, "", animal_options, function(index, value, click_type)
+menu.list_action(ped_spawn, "Spawn ped", {"spawnped"}, "", animal_options, function(index, value, click_type)
     if value ~= "Custom" then
         spawn_ped(animal_hashes[index])
     else
@@ -1372,7 +1373,7 @@ end)
 
 allpeds_gun = 0
 local gun_options = {'None', 'Pistol', 'Combat PDW', 'Shotgun', 'Knife', 'Minigun'}
-menu.action_slider(peds_root, "Give all peds gun", {"giveallpeds"}, "", gun_options, function(index, value, click_type)
+menu.list_action(peds_root, "Give all peds gun", {"giveallpeds"}, "", gun_options, function(index, value, click_type)
     if index == 1 then
         allpeds_gun = 0
     else
@@ -1380,7 +1381,7 @@ menu.action_slider(peds_root, "Give all peds gun", {"giveallpeds"}, "", gun_opti
     end
 end)
 
-menu.action(peds_root, "Teleport all to me", {"tpallpedshere"}, "", function(on_click)
+menu.action(peds_root, "Teleport all to me", {"tpallpedshere"}, "", function(click_type)
     local c = ENTITY.GET_ENTITY_COORDS(players.user_ped(), false)
     all_peds = entities.get_all_peds_as_handles()
     for k,ped in pairs(all_peds) do
@@ -1424,7 +1425,7 @@ end
 
 local task_dict = {"flop", "cover", "vault"}
 local task_options = {"Flop", "Cover", "Vault", "Cower", "Writhe"}
-menu.action_slider(peds_root, "Task all", {"taskped"}, "", task_options, function(index, value, click_type)
+menu.list_action(peds_root, "Task all", {"taskped"}, "", task_options, function(index, value, click_type)
     task_handler(value)
 end)
 
@@ -1735,7 +1736,7 @@ end)
 
 -- -1569615261
 
-menu.action(protected_areas_root, "Define protected area", {"definepa"}, "Defines a protected area on you.", function(on_click)
+menu.action(protected_areas_root, "Define protected area", {"definepa"}, "Defines a protected area on you.", function(click_type)
     local c = ENTITY.GET_ENTITY_COORDS(players.user_ped(), false)
     blip = HUD.ADD_BLIP_FOR_RADIUS(c.x, c.y, c.z, protected_area_radius)
     HUD.SET_BLIP_COLOUR(blip, 61)
@@ -1749,7 +1750,7 @@ menu.action(protected_areas_root, "Define protected area", {"definepa"}, "Define
     pa_next = #protected_areas + 1
     protected_areas[pa_next] = this_area
     local new_protected_area = menu.list(active_protected_areas_root, tostring(pa_next), {"protectedarea" .. pa_next}, "View and modify this area")
-    menu.action(new_protected_area, "Delete", {"deletepa" .. tostring(pa_next)}, "Delete this area.", function(on_click)
+    menu.action(new_protected_area, "Delete", {"deletepa" .. tostring(pa_next)}, "Delete this area.", function(click_type)
         HUD.SET_BLIP_ALPHA(blip, 0)
         protected_areas[pa_next] = nil
         menu.delete(new_protected_area)
@@ -1758,27 +1759,31 @@ menu.action(protected_areas_root, "Define protected area", {"definepa"}, "Define
 end)
 
 
-menu.action(world_root, "Super cleanse", {"supercleanse"}, "Uses stand API to delete EVERY entity it finds (including player vehicles!).", function(on_click)
-    local ct = 0
-    for k,ent in pairs(entities.get_all_vehicles_as_handles()) do
-        entities.delete(ent)
-        ct = ct + 1
-    end
-    for k,ent in pairs(entities.get_all_peds_as_handles()) do
-        if not PED.IS_PED_A_PLAYER(ent) then
+supercleanse = menu.action(world_root, "Super cleanse", {"supercleanse"}, "Uses stand API to delete EVERY entity it finds (including player vehicles!).", function(click_type)
+    menu.show_warning(supercleanse, click_type, "Be careful; using this can possibly crash your game or break a mission if important entities get deleted. Proceed?\n(NOTE: If you have skip warnings on, this won\'t show again.)", function()
+        local ct = 0
+        for k,ent in pairs(entities.get_all_vehicles_as_handles()) do
             entities.delete(ent)
+            ct = ct + 1
         end
-        ct = ct + 1
-    end
-    for k,ent in pairs(entities.get_all_objects_as_handles()) do
-        entities.delete(ent)
-        ct = ct + 1
-    end
-    util.toast("Super cleanse is complete! " .. ct .. " entities removed.")
+        for k,ent in pairs(entities.get_all_peds_as_handles()) do
+            if not PED.IS_PED_A_PLAYER(ent) then
+                entities.delete(ent)
+            end
+            ct = ct + 1
+        end
+        for k,ent in pairs(entities.get_all_objects_as_handles()) do
+            entities.delete(ent)
+            ct = ct + 1
+        end
+        util.toast("Super cleanse is complete! " .. ct .. " entities removed.")
+    end, function(l)
+            util.toast("No hard feelings.")
+    end, true)
 end)
 
 island_block = 0
-menu.action(world_root, "Sky island", {"skyisland"}, "Your own private residence in the sky. Sorta.", function(on_click)
+menu.action(world_root, "Sky island", {"skyisland"}, "Your own private residence in the sky. Sorta.", function(click_type)
     local c = {}
     c.x = 0
     c.y = 0
@@ -1806,7 +1811,7 @@ end)
 -- TWEAKS
 fakemessages_root = menu.list(tweaks_root, "Fake alerts", {"lancescriptfakemessages"}, "Fake alert screens")
 
-menu.action(tweaks_root, "Force cutscene", {"forcecutscene"}, "Input a cutscene to force. Google \"GTA V cutscene names list\". Very fun shit.", function(on_click)
+menu.action(tweaks_root, "Force cutscene", {"forcecutscene"}, "Input a cutscene to force. Google \"GTA V cutscene names list\". Very fun shit.", function(click_type)
     util.toast("Please type the cutscene name")
     menu.show_command_box("forcecutscene ")
 end, function(on_command)
@@ -1908,7 +1913,7 @@ end, "hello world")
 
 
 alert_options = {'Ban 1', 'Ban 2', 'Services unavailable', 'Stand on top', 'Suspended', 'Custom'}
-menu.action_slider(fakemessages_root, "Fake alert", {"fakealert"}, "", alert_options, function(index, value, click_type)
+menu.list_action(fakemessages_root, "Fake alert", {"fakealert"}, "", alert_options, function(index, value, click_type)
     pluto_switch index do 
         case 1: 
             show_custom_alert_until_enter("You have been banned from Grand Theft Auto Online.~n~Return to Grand Theft Auto V.")
@@ -2143,8 +2148,8 @@ function send_attacker(hash, pid, givegun)
         PED.SET_PED_AS_ENEMY(attacker, true)
         PED.SET_PED_FLEE_ATTRIBUTES(attacker, 0, false)
         PED.SET_PED_COMBAT_ATTRIBUTES(attacker, 46, true)
-        if givegun then
-            WEAPON.GIVE_WEAPON_TO_PED(attacker, atkgun, 0, false, true)
+        if atkgun ~= 0 then
+            WEAPON.GIVE_WEAPON_TO_PED(attacker, atkgun, 1000, false, true)
         end
         PED.SET_PED_MAX_HEALTH(attacker, atkhealth)
         ENTITY.SET_ENTITY_HEALTH(attacker, atkhealth)
@@ -2207,7 +2212,6 @@ function send_groundv_attacker(vhash, phash, pid, givegun)
             end
             max_out_car(atkbike)
             PED.SET_PED_INTO_VEHICLE(rider, bike, i)
-            WEAPON.GIVE_WEAPON_TO_PED(rider, atkgun, 1000, false, true)
             PED.SET_PED_COMBAT_ATTRIBUTES(rider, 5, true)
             PED.SET_PED_COMBAT_ATTRIBUTES(rider, 46, true)
             TASK.TASK_COMBAT_PED(rider, player_ped, 0, 16)
@@ -2216,8 +2220,8 @@ function send_groundv_attacker(vhash, phash, pid, givegun)
                 ENTITY.SET_ENTITY_INVINCIBLE(rider, true)
             end
 
-            if givegun then
-                WEAPON.GIVE_WEAPON_TO_PED(rider, atkgun, 0, false, true)
+            if atkgun ~= 0 then
+                WEAPON.GIVE_WEAPON_TO_PED(rider, atkgun, 1000, false, true)
             end
         end
     end
@@ -2248,11 +2252,10 @@ function set_up_player_actions(pid)
     playerveh_root = menu.list(ls_hostile, "Vehicle", {"playerv"}, "Vehicle actions with varying degrees of success depending on numerous factors.")
     npctrolls_root = menu.list(ls_hostile, "NPC trolling", {"npctrolls"}, "")
     attackers_root = menu.list(npctrolls_root, "Attackers", {"lancescriptattackers"}, "Send attackers")
-    customatk_root = menu.list(attackers_root, "Custom attackers", {"lancescriptcustomatk"}, "Spawn custom attackers")
     ram_root = menu.list(ls_hostile, "Ram", {"ram"}, "")
 
     local tp_options = {"To me", "To waypoint", "Maze Bank", "Underwater", "High up", "LSC", "SCP-173", "Large cell"}
-    menu.action_slider(playerveh_root, "Teleport", {"tpv"}, "", tp_options, function(index, value, click_type)
+    menu.list_action(playerveh_root, "Teleport", {"tpv"}, "", tp_options, function(index, value, click_type)
         local car = PED.GET_VEHICLE_PED_IS_IN(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid), true)
         if car ~= 0 then
             request_control_of_entity(car)
@@ -2300,7 +2303,7 @@ function set_up_player_actions(pid)
     end)
 
     local attach_options = {"To car", "Car to my car", "My car to their car", "Detach"}
-    menu.action_slider(playerveh_root, "Attach", {"attachv"}, "", attach_options, function(index, value, click_type)
+    menu.list_action(playerveh_root, "Attach", {"attachv"}, "", attach_options, function(index, value, click_type)
         local car = PED.GET_VEHICLE_PED_IS_IN(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid), true)
         if car ~= 0 then
             request_control_of_entity(car)
@@ -2331,7 +2334,7 @@ function set_up_player_actions(pid)
     end)
 
     local vhp_options = {"Destroy", "Repair"}
-    menu.action_slider(playerveh_root, "Health", {"vhealth"}, "Note that destroying may be irreversible. It\'s just how the game works.", vhp_options, function(index, value, click_type)
+    menu.list_action(playerveh_root, "Health", {"vhealth"}, "Note that destroying may be irreversible. It\'s just how the game works.", vhp_options, function(index, value, click_type)
         local car = PED.GET_VEHICLE_PED_IS_IN(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid), true)
         if car ~= 0 then
             request_control_of_entity(car)
@@ -2343,7 +2346,7 @@ function set_up_player_actions(pid)
         end
     end)
 
-    menu.action(playerveh_root, "Yeet vehicle", {"yeetv"}, "", function(on_click)
+    menu.action(playerveh_root, "Yeet vehicle", {"yeetv"}, "", function(click_type)
         local car = PED.GET_VEHICLE_PED_IS_IN(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid), true)
         if car ~= 0 then
             request_control_of_entity(car)
@@ -2351,13 +2354,13 @@ function set_up_player_actions(pid)
         end
     end)
 
-    menu.action(playerveh_root, "Delete vehicle", {"deleteveh"}, "delete the vehicle they\'re in lol", function(on_click)
+    menu.action(playerveh_root, "Delete vehicle", {"deleteveh"}, "delete the vehicle they\'re in lol", function(click_type)
         local car = PED.GET_VEHICLE_PED_IS_IN(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid), true)
         entities.delete(car)
     end)
 
     local options = {"Open", "Close", "Break"}
-    menu.action_slider(playerveh_root, "Door control", {"vdoorctrl"}, "", options, function(index, value, click_type)
+    menu.list_action(playerveh_root, "Door control", {"vdoorctrl"}, "", options, function(index, value, click_type)
         local car = PED.GET_VEHICLE_PED_IS_IN(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid), true)
         if car ~= 0 then
             request_control_of_entity(car)
@@ -2378,7 +2381,7 @@ function set_up_player_actions(pid)
         end
     end)
 
-    menu.action(playerveh_root, "Godmode vehicle", {"godmodev"}, "", function(on_click)
+    menu.action(playerveh_root, "Godmode vehicle", {"godmodev"}, "", function(click_type)
         local car = PED.GET_VEHICLE_PED_IS_IN(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid), true)
         if car ~= 0 then
             request_control_of_entity(car)
@@ -2449,30 +2452,87 @@ function set_up_player_actions(pid)
         end
     end)
 
-    menu.action(ls_friendly, "Remove stickybombs from car", {"removebombs"}, "", function(on_click)
+    menu.action(ls_friendly, "Remove stickybombs from car", {"removebombs"}, "", function(click_type)
         local car = PED.GET_VEHICLE_PED_IS_IN(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid), true)
         NETWORK.REMOVE_ALL_STICKY_BOMBS_FROM_ENTITY(car)
     end)
 
-    menu.action(ls_hostile, "Crush player", {"crush"}, "Spawns a heavy truck several meters above them and forces its Z velocity to -100 to absolutely decimate them when it lands.", function(on_click)
+    crush_root = menu.list(ls_hostile, "Crush player", {"crushplayeropts"}, "")
+
+    local custom_crush_model = 'dump'
+    menu.text_input(crush_root, "Custom crush model", {"customcrushmodel"}, "Input a custom vehicle name to crush the player with (the NAME, NOT HASH)", function(on_input)
+        custom_crush_model = on_input
+    end, 'dump')
+
+
+    local crush_vehicle_hashes = {util.joaat('flatbed'), util.joaat('faggio'), util.joaat('speedo2')}
+    local crush_vehicle_names = {'Truck', 'Faggio', 'Clown van', 'Custom'}
+    menu.list_action(crush_root, "Crush player", {"crush"}, "Spawns a vehicle several meters above them to absolutely decimate them when it lands.", crush_vehicle_names, function(index, value, click_type)
+        if value == 'Custom' then 
+            hash = util.joaat(custom_crush_model)
+        else
+            hash = crush_vehicle_hashes[index]
+        end
         local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         coords = ENTITY.GET_ENTITY_COORDS(target_ped, false)
         coords.x = coords['x']
         coords.y = coords['y']
         coords.z = coords['z'] + 20.0
-        request_model_load(1917016601)
-        local truck = entities.create_vehicle(1917016601, coords, 0.0)
-        --local vel = ENTITY.GET_ENTITY_VELOCITY(vel)
-        --ENTITY.SET_ENTITY_VELOCITY(truck, vel['x'], vel['y'], -100.0)
+        request_model_load(hash)
+        local veh = entities.create_vehicle(hash, coords, 0.0)
     end)
 
-        
+    local obj_options = {"Ramp", "Barrier", "Windmill", "Radar"}
+    menu.list_action(ls_hostile, "Spawn object", {"spawnobj"}, "Trolls them with the specified object. Each one works a little differently.", obj_options, function (index, value, click_type)
+        local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
+        pluto_switch value do 
+            case "Ramp":
+                local hash = 2282807134
+                request_model_load(hash)
+                local ramp = spawn_object_in_front_of_ped(target_ped, hash, 90, 50.0, -1, true)
+                local c = ENTITY.GET_ENTITY_COORDS(ramp, true)
+                ENTITY.SET_ENTITY_COORDS_NO_OFFSET(ramp, c['x'], c['y'], c['z']-0.2, false, false, false)
+                break
+            case "Barrier": 
+                local hash = 3729169359
+                local obj = spawn_object_in_front_of_ped(target_ped, hash, 0, 5.0, -0.5, false)
+                ENTITY.FREEZE_ENTITY_POSITION(obj, true)
+                break
+            case "Windmill": 
+                local hash = 1952396163
+                local obj = spawn_object_in_front_of_ped(target_ped, hash, 0, 5.0, -30, false)
+                ENTITY.FREEZE_ENTITY_POSITION(obj, true)
+                break
+            case "Radar": 
+                local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
+                local hash = 2306058344
+                local obj = spawn_object_in_front_of_ped(target_ped, hash, 0, 0.0, -5.0, false)
+                ENTITY.FREEZE_ENTITY_POSITION(obj, true)
+                break
+        end
+    end)
+
+    local text_options = {"Nudes", "Random texts"}
+    menu.list_action(ls_hostile, "Text", {"textplayer"}, "", text_options, function(index, value, click_type)
+        if value == 1 then
+            for i=1, #sexts do
+                send_player_label_sms(sexts[i], pid)
+            end
+        else
+            for i=1, 100 do
+                send_player_label_sms(all_labels[math.random(1, #all_labels)], pid)
+                util.yield()
+            end
+        end
+        util.toast("Texts submitted.")
+    end)
+
     local v_model = 'lazer'
     menu.text_input(spawnvehicle_root, "Custom vehicle model", {"givecarinput"}, "Input a custom vehicle name to spawn (the NAME, NOT HASH)", function(on_input)
         v_model = on_input
     end, 'lazer')
 
-    menu.action_slider(spawnvehicle_root, "Give vehicle", {"givepveh"}, "", vehicle_names, function(index, value, click_type)
+    menu.list_action(spawnvehicle_root, "Give vehicle", {"givepveh"}, "", vehicle_names, function(index, value, click_type)
         if value ~= "Custom" then 
             give_vehicle(pid, vehicle_hashes[index])
         else
@@ -2487,7 +2547,7 @@ function set_up_player_actions(pid)
 
     local ram_hashes = {-1007528109, -2103821244, 368211810, -1649536104}
     local ram_options = {'Howard', 'Rally Truck', 'Cargo Plane', 'Phantom Wedge', 'Custom'}
-    menu.action_slider(ram_root, "Ram with", {"ramp"}, "", ram_options, function(index, value, click_type)
+    menu.list_action(ram_root, "Ram with", {"ramp"}, "", ram_options, function(index, value, click_type)
         if value ~= "Custom" then
             ram_ped_with(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid), ram_hashes[index], math.random(5, 15))
         else
@@ -2497,7 +2557,7 @@ function set_up_player_actions(pid)
 
     local explo_types = {13, 12, 70}
     local options = {"Water Jet", "Fire Jet", "Launch player"}
-    local explo_type_slider = menu.action_slider(explosions_root, "Explosion type", {"explotype"}, "", options, function(index, value, click_type)
+    local explo_type_slider = menu.list_action(explosions_root, "Explosion type", {"explotype"}, "", options, function(index, value, click_type)
         local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         local coords = ENTITY.GET_ENTITY_COORDS(target_ped, false)
         e_type = explo_types[value]
@@ -2518,7 +2578,7 @@ function set_up_player_actions(pid)
 
     local p_types = {100416529, 126349499}
     local options = {"Bullet", "Snowball"}
-    local projectile_type_slider = menu.action_slider(explosions_root, "Projectile type", {"projectiletype"}, "", options, function(index, value, click_type)
+    local projectile_type_slider = menu.list_action(explosions_root, "Projectile type", {"projectiletype"}, "", options, function(index, value, click_type)
         local target = ENTITY.GET_ENTITY_COORDS(target_ped, false)
         local owner = players.user_ped()
         p_type = p_types[value]
@@ -2540,7 +2600,7 @@ function set_up_player_actions(pid)
         end
     end)
 
-    menu.action(ls_hostile, "Chop up", {"chopup"}, "Makes chop suey of the player with helicopter blades. Works best if your player is nearby.", function(on_click)
+    menu.action(ls_hostile, "Chop up", {"chopup"}, "Makes chop suey of the player with helicopter blades. Works best if your player is nearby.", function(click_type)
         local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         local coords = ENTITY.GET_ENTITY_COORDS(target_ped, false)
         coords.x = coords['x']
@@ -2591,10 +2651,42 @@ function set_up_player_actions(pid)
         atk_car= on_input
     end, "adder")
     
+    local custom_atkgun = 'fists'
+    menu.text_input(attackers_root, "Custom attacker gun", {"giveatkgun"}, "Input a weapon to give the attacker(s)", function(on_input)
+        custom_atkgun = on_input
+    end, 'Unarmed')
+
+    local atk_guns = {'None', 'Pistol', 'Combat PDW', 'Shotgun', 'Knife', 'Custom'}
+    menu.list_action(attackers_root, "Weapon to give to attackers", {"giveatkgun"}, "", atk_guns, function(index, value, click_type)
+        if value ~= "Custom" then
+            atkgun = good_guns[index]
+        else
+            atkgun = util.joaat(custom_atkgun)
+        end
+    end)
+
+    menu.toggle(attackers_root, "Godmode attackers", {"godmodeatk"}, "Godmodes attackers. Some things are intentionally left out of this, because I think it\'s funner that way. Cry.", function(on)
+        godmodeatk = on
+    end)
+
+    menu.toggle(attackers_root, "Suffer crits", {"suffercritsatk"}, "If on, attackers will suffer critical hits, such as headshots. If off, there is no multiplier for critical hits and they will all do the same damage.", function(on)
+        atk_critical_hits = on
+    end, true)
+
+    menu.slider(attackers_root, "Attacker health", {"attackerhealth"}, "", 1, 10000, 100, 1, function(s)
+        atkhealth = s
+        if s > 100 then
+            util.toast("Since you set the HP over 100, you should consider turning critical hits off.")
+        end
+      end)
+
+    menu.slider(attackers_root, "Number of attackers", {"numattackers"}, "Number of attackers to send", 1, 30, 1, 1, function(s)
+        num_attackers = s
+    end)
 
     local attacker_hashes = {-1788665315, 307287994, util.joaat('csb_stripper_02'), util.joaat("CS_BradCadaver")}
     local options = {"Dog", "Mountain lion", "Stripper", "Brad", "Jets", "A-10s", "Cargo planes", "Bri-ish", "Clown", "Motorcycle gang", "Helicopter", "Custom", "Custom aircraft", "Custom car"}
-    menu.action_slider(attackers_root, "Send attacker", {"sendattacker"}, "", options, function(index, value, click_type)
+    menu.list_action(attackers_root, "Send attacker", {"sendattacker"}, "", options, function(index, value, click_type)
             pluto_switch value do
                 case "Custom":
                     send_attacker(util.joaat(atk_ped), pid, false)
@@ -2683,16 +2775,8 @@ function set_up_player_actions(pid)
             end
     end)
 
-    menu.action(attackers_root, "Input weapon hash to give", {"customwephash"}, "Input a custom weapon hash for the attacker. You must enter the hash for this one, not the string.", function(on_click)
-        util.toast("Please input the weapon hash")
-        menu.show_command_box("customwephash" .. PLAYER.GET_PLAYER_NAME(pid) .. " ")
-    end, function(on_command)
-        atkgun = on_command
-        util.toast("Weapon set to " .. on_command)
-    end)
-
     local tow_options = {"From front", "From behind"}
-    menu.action_slider(npctrolls_root, "Tow car", {"towcar"}, "They didn\'t pay their lease.", tow_options, function(index, value, click_type)
+    menu.list_action(npctrolls_root, "Tow car", {"towcar"}, "They didn\'t pay their lease.", tow_options, function(index, value, click_type)
         local player_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         local last_veh = PED.GET_VEHICLE_PED_IS_IN(player_ped, true)
         local cur_veh = PED.GET_VEHICLE_PED_IS_IN(player_ped, false)
@@ -2725,7 +2809,7 @@ function set_up_player_actions(pid)
         end
     end)
 
-    menu.action(npctrolls_root, "Cat explosion", {"meow"}, "UWU", function(on_click)
+    menu.action(npctrolls_root, "Cat explosion", {"meow"}, "UWU", function(click_type)
         local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         local coords = ENTITY.GET_ENTITY_COORDS(target_ped, false)
         coords.x = coords['x']
@@ -2744,37 +2828,7 @@ function set_up_player_actions(pid)
         end
     end)
 
-    local obj_options = {"Ramp", "Barrier", "Windmill", "Radar"}
-    menu.action_slider(ls_hostile, "Object troll", {"spawnobj"}, "Trolls them with the specified object. Each one works a little differently.", obj_options, function (index, value, click_type)
-        local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
-        pluto_switch value do 
-            case "Ramp":
-                local hash = 2282807134
-                request_model_load(hash)
-                local ramp = spawn_object_in_front_of_ped(target_ped, hash, 90, 50.0, -1, true)
-                local c = ENTITY.GET_ENTITY_COORDS(ramp, true)
-                ENTITY.SET_ENTITY_COORDS_NO_OFFSET(ramp, c['x'], c['y'], c['z']-0.2, false, false, false)
-                break
-            case "Barrier": 
-                local hash = 3729169359
-                local obj = spawn_object_in_front_of_ped(target_ped, hash, 0, 5.0, -0.5, false)
-                ENTITY.FREEZE_ENTITY_POSITION(obj, true)
-                break
-            case "Windmill": 
-                local hash = 1952396163
-                local obj = spawn_object_in_front_of_ped(target_ped, hash, 0, 5.0, -30, false)
-                ENTITY.FREEZE_ENTITY_POSITION(obj, true)
-                break
-            case "Radar": 
-                local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
-                local hash = 2306058344
-                local obj = spawn_object_in_front_of_ped(target_ped, hash, 0, 0.0, -5.0, false)
-                ENTITY.FREEZE_ENTITY_POSITION(obj, true)
-                break
-        end
-    end)
-
-    menu.action(ls_hostile, "Drop stickybomb", {"anonsticky"}, "Stubborn, but works when it works.", function(on_click)
+    menu.action(ls_hostile, "Drop stickybomb", {"anonsticky"}, "Stubborn, but works when it works.", function(click_type)
         local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         local target = ENTITY.GET_ENTITY_COORDS(target_ped)
         local random_ped = get_random_ped()
@@ -2782,7 +2836,7 @@ function set_up_player_actions(pid)
     end)
 
     --SET_VEHICLE_WHEEL_HEALTH(Vehicle vehicle, int wheelIndex, float health)
-    menu.action(ls_hostile, "Cage", {"lscage"}, "Basic cage option. Cause you cant handle yourself. We are a little more ethical here at Lance Studios though, so the cage has some wiggle room (our special cage model also means that like, no menu blocks the model).", function(on_click)
+    menu.action(ls_hostile, "Cage", {"lscage"}, "Basic cage option. Cause you cant handle yourself. We are a little more ethical here at Lance Studios though, so the cage has some wiggle room (our special cage model also means that like, no menu blocks the model).", function(click_type)
         local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         local coords = ENTITY.GET_ENTITY_COORDS(ped, true)
         coords.x = coords['x']
@@ -2796,7 +2850,7 @@ function set_up_player_actions(pid)
         ENTITY.SET_ENTITY_ROTATION(cage2, 0.0, 90.0, 0.0, 1, true)
     end)
 
-    menu.action(ls_hostile, "Cargo plane trap", {"cargoplanetrap"}, "Traps the player in a cargo plane.", function(on_click)
+    menu.action(ls_hostile, "Cargo plane trap", {"cargoplanetrap"}, "Traps the player in a cargo plane.", function(click_type)
         local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         local coords = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(ped, 0.0, 0.0, 0.0)
         coords.x = coords['x']
@@ -2813,7 +2867,7 @@ function set_up_player_actions(pid)
         end
     end)
 
-    menu.action(ls_hostile, "Raise player", {"raise"}, "Raises the player up with an invisible platform. At its best, this will fall kill the player if they dont deploy a chute. At its worst, it will just glitch the player around.", function(on_click)
+    menu.action(ls_hostile, "Raise player", {"raise"}, "Raises the player up with an invisible platform. At its best, this will fall kill the player if they dont deploy a chute. At its worst, it will just glitch the player around.", function(click_type)
         local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         local hash = util.joaat("stt_prop_stunt_bblock_mdm3")
         request_model_load(hash)
@@ -2832,7 +2886,7 @@ function set_up_player_actions(pid)
         entities.delete(lifter)
     end)
 
-    menu.toggle_loop(ls_hostile, "Earrape", {"earrape"}, "Ouch. May trigger crash detections.", function(on_click)
+    menu.toggle_loop(ls_hostile, "Earrape", {"earrape"}, "Ouch. May trigger crash detections.", function(click_type)
         local ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         for i = 1, 20 do
             AUDIO.PLAY_SOUND_FROM_ENTITY(-1, "Bed", ped, "WastedSounds", true, true)
@@ -2840,7 +2894,7 @@ function set_up_player_actions(pid)
         util.yield(500)
     end)
 
-    menu.action(ls_hostile, "Send schizo message", {"schizomessage"}, "Sends them a chat message that looks normal, but only they can see it. Makes them look schizophrenic if they respond.", function(on_click)
+    menu.action(ls_hostile, "Send schizo message", {"schizomessage"}, "Sends them a chat message that looks normal, but only they can see it. Makes them look schizophrenic if they respond.", function(click_type)
         util.toast("Please input the chat")
         menu.show_command_box("schizomessage" .. PLAYER.GET_PLAYER_NAME(pid) .. " ")
         end, function(on_command)
@@ -2853,7 +2907,7 @@ function set_up_player_actions(pid)
     end)
 
     
-    menu.action(ls_hostile, "Invisible spoof chat", {"invisspoof"}, "Send a text spoofing as this player, but the player won\'t see it so they wont know they\'re spoofed.", function(on_click)
+    menu.action(ls_hostile, "Invisible spoof chat", {"invisspoof"}, "Send a text spoofing as this player, but the player won\'t see it so they wont know they\'re spoofed.", function(click_type)
         util.toast("Please input what you want this user to say")
         menu.show_command_box("invisspoof" .. PLAYER.GET_PLAYER_NAME(pid) .. " ")
     end, function(on_command)
@@ -2870,23 +2924,8 @@ function set_up_player_actions(pid)
 
 
     --ba_prop_club_glass_trans
-    
-    local text_options = {"Nudes", "Random texts"}
-    menu.action_slider(ls_hostile, "Text", {"textplayer"}, "", text_options, function(index, value, click_type)
-        if value == 1 then
-            for i=1, #sexts do
-                send_player_label_sms(sexts[i], pid)
-            end
-        else
-            for i=1, 100 do
-                send_player_label_sms(all_labels[math.random(1, #all_labels)], pid)
-                util.yield()
-            end
-        end
-        util.toast("Texts submitted.")
-    end)
 
-    menu.action(npctrolls_root, "NPC jack last car v3.0", {"npcjack"}, "Sends an NPC to steal their car.", function(on_click)
+    menu.action(npctrolls_root, "NPC jack last car v3.0", {"npcjack"}, "Sends an NPC to steal their car.", function(click_type)
         npc_jack(pid, false)
     end)
 
@@ -2896,7 +2935,7 @@ function set_up_player_actions(pid)
         mod_uses("ped", if on then 1 else -1)
     end)
 
-    menu.action(npctrolls_root, "Fill car with peds", {"fillcar"}, "Fills the player\'s car with nearby peds", function(on_click)
+    menu.action(npctrolls_root, "Fill car with peds", {"fillcar"}, "Fills the player\'s car with nearby peds", function(click_type)
         local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         if PED.IS_PED_IN_ANY_VEHICLE(target_ped, true) then
                 local veh = PED.GET_VEHICLE_PED_IS_IN(target_ped, false)
@@ -2947,33 +2986,6 @@ function set_up_player_actions(pid)
             util.toast("Player is not in a car :(")
         end
     end)
-
-    menu.slider(attackers_root, "Gun to give to attackers", {"giveatkgun"}, "0 = none\n1 = pistol\n2 = combat pdw\n3 = shotgun\n4 = Knife\nDoes not affect some attacker options.", 0, 10, 0, 1, function(s)
-        if s == 0 then
-            atkgun = 0
-        else
-            atkgun = good_guns[s]
-        end
-      end)
-
-    menu.toggle(attackers_root, "Godmode attackers", {"godmodeatk"}, "Godmodes attackers. Some things are intentionally left out of this, because I think it\'s funner that way. Cry.", function(on)
-        godmodeatk = on
-    end)
-
-    menu.toggle(attackers_root, "Suffer crits", {"suffercritsatk"}, "If on, attackers will suffer critical hits, such as headshots. If off, there is no multiplier for critical hits and they will all do the same damage.", function(on)
-        atk_critical_hits = on
-    end, true)
-
-    menu.slider(attackers_root, "Attacker health", {"attackerhealth"}, "", 1, 10000, 100, 1, function(s)
-        atkhealth = s
-        if s > 100 then
-            util.toast("Since you set the HP over 100, you should consider turning critical hits off.")
-        end
-      end)
-
-    menu.slider(attackers_root, "Number of attackers", {"numattackers"}, "Number of attackers to send", 1, 30, 1, 1, function(s)
-        num_attackers = s
-    end)
 end
 
 broke_blips = {}
@@ -3017,7 +3029,7 @@ menu.toggle(ap_root, "Delete armed vehicles", {"noarmedvehs"}, "Deletes any vehi
 end)
 
 
-menu.action(aphostile_root, "Mass spoof chat", {"masschat"}, "Send a text spoofing as everyone in the session", function(on_click)
+menu.action(aphostile_root, "Mass spoof chat", {"masschat"}, "Send a text spoofing as everyone in the session", function(click_type)
     util.toast("Please input what you want everyone to say")
     menu.show_command_box("masschat ")
 end, function(on_command)
@@ -3033,7 +3045,7 @@ end, function(on_command)
 end)
 
 local text_options = {"Nudes", "Random texts"}
-menu.action_slider(aphostile_root, "Text", {"textallplayers"}, "", text_options, function(index, value, click_type)
+menu.list_action(aphostile_root, "Text", {"textallplayers"}, "", text_options, function(index, value, click_type)
     for k,pid in pairs(players.list(false, true, true)) do
         if value == 1 then
             for i=1, #sexts do
@@ -3064,7 +3076,7 @@ menu.slider(online_root, "Auto-kick KD threshold", {"autokickkd"}, "Threshold pl
     kdthres = 6
   end)
 
-menu.action(ap_root, "Toast best mug target", {"best mug"}, "Toasts you the player with the most wallet money, so you can mug them nicely.", function(on_click)
+menu.action(ap_root, "Toast best mug target", {"best mug"}, "Toasts you the player with the most wallet money, so you can mug them nicely.", function(click_type)
     local ret = get_best_mug_target()
     if ret ~= nil then
         util.toast(ret)
@@ -3073,7 +3085,7 @@ end)
 
 
 local announce_options = {'Best mug target', 'Poorest player', 'Richest player'}
-menu.action_slider(ap_root, "Announce", {"announcestat"}, "", announce_options, function(index, value, click_type)
+menu.list_action(ap_root, "Announce", {"announcestat"}, "", announce_options, function(index, value, click_type)
     pluto_switch index do 
         case 1: 
             local ret = get_best_mug_target()
@@ -3096,7 +3108,7 @@ menu.action_slider(ap_root, "Announce", {"announcestat"}, "", announce_options, 
     end
 end)
 
-menu.action(aphostile_root, "Kick all non-friends", {"kicknonfriends"}, "If people have karma this might backfire.", function(on_click)
+menu.action(aphostile_root, "Kick all non-friends", {"kicknonfriends"}, "If people have karma this might backfire.", function(click_type)
     local victims = players.list(fals, false, true)
     for k,pid in pairs(victims) do
         menu.trigger_commands("kick" .. PLAYER.GET_PLAYER_NAME(pid))
@@ -3109,12 +3121,12 @@ menu.slider(aphostile_root, "Infibounty amount", {"infibountyamt"}, "", 0, 10000
   end)
 
 
-menu.toggle_loop(aphostile_root, "Infibounty", {"infibounty"}, "Repeatedly places max bounty on everyone.", function(on_click)
+menu.toggle_loop(aphostile_root, "Infibounty", {"infibounty"}, "Repeatedly places max bounty on everyone.", function(click_type)
     menu.trigger_commands("bountyall " .. tostring(infibounty_amt))
     util.yield(60000)
 end)
 
-menu.action(aphostile_root, "Crash all", {"crashall"}, "Crashes everyone using a basic yet working method I discovered. 2take1 punching the air rn. Please don\'t abuse it.", function(on_click)
+menu.action(aphostile_root, "Crash all", {"crashall"}, "Crashes everyone using a basic yet working method I discovered. 2take1 punching the air rn. Please don\'t abuse it.", function(click_type)
     -- obfuscation to prevent patching
     -- if you are unobfuscating this to steal my crash for your shitty lua that like probably nobody downloads on 2take1 or cherax: fuck you
     -- learn your own shit! how unique is something if everyone has it? learn some new tricks, i beg you. 
@@ -3160,7 +3172,7 @@ menu.text_input(apgiveveh_root, "Custom vehicle model", {"giveallcarinput"}, "In
 end, 'lazer')
 
 
-menu.action_slider(apgiveveh_root, "Give vehicle", {"givepveh"}, "", vehicle_names, function(index, value, click_type)
+menu.list_action(apgiveveh_root, "Give vehicle", {"givepveh"}, "", vehicle_names, function(index, value, click_type)
     if value ~= "Custom" then 
         give_vehicle_all(vehicle_hashes[index])
     else
@@ -3342,18 +3354,19 @@ end)
 
 -- CREDITS
 lancescript_credits = menu.list(lancescript_root, "Credits", {"lancescriptcredits"}, "")
-menu.action(lancescript_credits, "Sainan", {}, "Donating $200 worth of crypto (top donor), helping with reverse engineering GTA V, developing Stand that makes Lancescript possible, and generally being a big help. Thanks for everything.", function(on_click) end)
-menu.action(lancescript_credits, "61k", {}, "Donating $20 worth of Litecoin. Thank you for your support.", function(on_click) end)
-menu.action(lancescript_credits, "Millennium#0001", {}, "Sending a $10 fortnit- i mean amazon- gift card. Thanks!", function(on_click) end)
-menu.action(lancescript_credits, "Y1tzy", {}, "One of the original donors. Thanks!", function(on_click) end)
-menu.action(lancescript_credits, "Lancito01", {}, "Donating to me :)", function(on_click) end)
-menu.action(lancescript_credits, "YoYo", {}, "Donating to my PayPal. Thanks for your support! :)", function(on_click) end)
-menu.action(lancescript_credits, "QuickNET", {}, "Big help with reverse engineering, natives, memory stuff, etc. Thanks.", function(on_click) end)
-menu.action(lancescript_credits, "ICYPhoenix", {}, "Inspiring Lancescript, help with code/natives", function(on_click) end)
-menu.action(lancescript_credits, "Jerrrry123", {}, "Creating a (accepted) PR that optimized LanceScript and cut down on code, also fixed and improved some features. Thanks!", function(on_click) end)
-menu.action(lancescript_credits, "aaronlink127", {}, "Code suggestions", function(on_click) end)
-menu.action(lancescript_credits, "Nowiry", {}, "Great developer, making some useful funcs that Lancescript uses", function(on_click) end)
-menu.action(lancescript_credits, "ZERO", {}, "Suggesting ped flags for burning man, and former swim in air", function(on_click) end)
+menu.action(lancescript_credits, "Sainan", {}, "Donating $200 worth of crypto (top donor), helping with reverse engineering GTA V, developing Stand that makes Lancescript possible, and generally being a big help. Thanks for everything.", function(click_type) end)
+menu.action(lancescript_credits, "61k", {}, "Donating $20 worth of Litecoin. Thank you for your support.", function(click_type) end)
+menu.action(lancescript_credits, "Millennium#0001", {}, "Sending a $10 fortnit- i mean amazon- gift card. Thanks!", function(click_type) end)
+menu.action(lancescript_credits, "Y1tzy", {}, "One of the original donors. Thanks!", function(click_type) end)
+menu.action(lancescript_credits, "Lancito01", {}, "Donating to me :)", function(click_type) end)
+menu.action(lancescript_credits, "YoYo", {}, "Donating to my PayPal. Thanks for your support! :)", function(click_type) end)
+menu.action(lancescript_credits, "QuickNET", {}, "Big help with reverse engineering, natives, memory stuff, etc. Thanks.", function(click_type) end)
+menu.action(lancescript_credits, "ICYPhoenix", {}, "Inspiring Lancescript, help with code/natives", function(click_type) end)
+menu.action(lancescript_credits, "Jerrrry123", {}, "Creating a (accepted) PR that optimized LanceScript and cut down on code, also fixed and improved some features. Thanks!", function(click_type) end)
+menu.action(lancescript_credits, "aaronlink127", {}, "Code suggestions", function(click_type) end)
+menu.action(lancescript_credits, "Axhov", {}, "Maintaining LanceScript during my hiatus", function(click_type) end)
+menu.action(lancescript_credits, "Nowiry", {}, "Great developer, making some useful funcs that Lancescript uses", function(click_type) end)
+menu.action(lancescript_credits, "ZERO", {}, "Suggesting ped flags for burning man, and former swim in air", function(click_type) end)
 
 -- SCRIPT IS "FINISHED LOADING"
 is_loading = false
