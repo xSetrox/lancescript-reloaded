@@ -2578,18 +2578,20 @@ function set_up_player_actions(pid)
 
     local p_types = {100416529, 126349499}
     local options = {"Bullet", "Snowball"}
-    local projectile_type_slider = menu.list_action(explosions_root, "Projectile type", {"projectiletype"}, "", options, function(index, value, click_type)
+    menu.list_action(explosions_root, "Projectile type", {"projectiletype"}, "", options, function(index, value, click_type)
+        local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         local target = ENTITY.GET_ENTITY_COORDS(target_ped, false)
         local owner = players.user_ped()
-        p_type = p_types[value]
+        p_type = p_types[index]
         WEAPON.REQUEST_WEAPON_ASSET(p_type)
         MISC.SHOOT_SINGLE_BULLET_BETWEEN_COORDS(target['x'], target['y'], target['z']-0.5, target['x'], target['y'], target['z']-0.4, 100, true, p_type, owner, true, false, 4000.0)
     end)
 
     menu.toggle_loop(explosions_root, "Projectile loop", {"projectileloop"}, "", function(on)
+        local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         local target = ENTITY.GET_ENTITY_COORDS(target_ped, false)
         local owner = players.user_ped()
-        MISC.SHOOT_SINGLE_BULLET_BETWEEN_COORDS(target['x'], target['y'], target['z']-0.5, target['x'], target['y'], target['z']-0.4, 100, true, p_types[menu.get_value(projectile_type_slider)], owner, true, false, 4000.0)
+        MISC.SHOOT_SINGLE_BULLET_BETWEEN_COORDS(target['x'], target['y'], target['z']-0.5, target['x'], target['y'], target['z']-0.4, 100, true, p_type, owner, true, false, 4000.0)
     end)
 
     menu.toggle(ls_neutral, "Attach to player", {"attachto"}, "Useful, because if you\'re near the player your trolling works better", function(on)
