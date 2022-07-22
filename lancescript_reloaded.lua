@@ -1,5 +1,5 @@
 -- LANCESCRIPT RELOADED
--- version 4.4.2, unless i forgot to update this line loll
+-- version 4.4.3, unless i forgot to update this line loll
 util.require_natives("1640181023")
 gta_labels = require('all_labels')
 all_labels = gta_labels.all_labels
@@ -2514,7 +2514,7 @@ function set_up_player_actions(pid)
 
     local text_options = {"Nudes", "Random texts"}
     menu.list_action(ls_hostile, "Text", {"textplayer"}, "", text_options, function(index, value, click_type)
-        if value == 1 then
+        if index == 1 then
             for i=1, #sexts do
                 send_player_label_sms(sexts[i], pid)
             end
@@ -3047,7 +3047,7 @@ end)
 local text_options = {"Nudes", "Random texts"}
 menu.list_action(aphostile_root, "Text", {"textallplayers"}, "", text_options, function(index, value, click_type)
     for k,pid in pairs(players.list(false, true, true)) do
-        if value == 1 then
+        if index == 1 then
             for i=1, #sexts do
                 send_player_label_sms(sexts[i], pid)
             end
