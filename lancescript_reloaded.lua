@@ -1,5 +1,5 @@
 -- LANCESCRIPT RELOADED
--- version 4.4.3, unless i forgot to update this line loll
+-- version 4.4.5, unless i forgot to update this line loll
 util.require_natives("1640181023")
 gta_labels = require('all_labels')
 all_labels = gta_labels.all_labels
@@ -47,7 +47,7 @@ end
 lancescript_logo = directx.create_texture(resources_dir .. 'lancescript_logo.png')
 -- logo display
 if SCRIPT_MANUAL_START then
-    AUDIO.PLAY_SOUND(-1, "Virus_Eradicated", "LESTER1A_SOUNDS", 0, 0, 1)
+    AUDIO.PLAY_SOUND(-1, "OPEN_WINDOW", "LESTER1A_SOUNDS", 0, 0, 1)
     logo_alpha = 0
     logo_alpha_incr = 0.01
     logo_alpha_thread = util.create_thread(function (thr)
@@ -2100,7 +2100,6 @@ freezeloop = false
 atkhealth = 100
 atk_critical_hits = true
 freezetar = -1
-atkgun = 0
 
 function tp_player_car_to_coords(pid, coord)
     local name = PLAYER.GET_PLAYER_NAME(pid)
@@ -2127,16 +2126,21 @@ function tp_all_player_cars_to_coords(coord)
 end
 
 givegun = false
-num_attackers = 1
-function send_attacker(hash, pid, givegun)
+function send_attacker(hash, pid, givegun, num_attackers, atkgun)
     local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
     coords = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(target_ped, 0.0, -3.0, 0.0)
     coords.x = coords['x']
     coords.y = coords['y']
     coords.z = coords['z']
-    request_model_load(hash)
+    if hash ~= 'CLONE' then
+        request_model_load(hash)
+    end
     for i=1, num_attackers do
-        local attacker = entities.create_ped(28, hash, coords, math.random(0, 270))
+        if hash ~= 'CLONE' then
+            local attacker = entities.create_ped(28, hash, coords, math.random(0, 270))
+        else
+            local attacker = PED.CLONE_PED(target_ped, true, true, true)
+        end
         local blip = HUD.ADD_BLIP_FOR_ENTITY(attacker)
         HUD.SET_BLIP_COLOUR(blip, 61)
         if godmodeatk then
@@ -2157,7 +2161,7 @@ function send_attacker(hash, pid, givegun)
     end
 end
 
-function send_aircraft_attacker(vhash, phash, pid)
+function send_aircraft_attacker(vhash, phash, pid, num_attackers)
     local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
     coords = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(target_ped, 1.0, 0.0, 500.0)
     coords.x = coords['x']
@@ -2192,7 +2196,7 @@ function send_aircraft_attacker(vhash, phash, pid)
     end
 end
 
-function send_groundv_attacker(vhash, phash, pid, givegun)
+function send_groundv_attacker(vhash, phash, pid, givegun, num_attackers, atkgun)
     local player_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
     request_model_load(vhash)
     local bike_hash = -159126838
@@ -2242,6 +2246,7 @@ vehicle_hashes = {util.joaat("dune2"), util.joaat("speedo2"), util.joaat("kriege
 vehicle_names = {'Space docker', 'Clown van', 'Krieger', 'Kuruma', 'Insurgent', 'Neon', 'Akula', 'Alpha-Z1', 'Rogue', 'Oppressor MK2', 'Hydra', 'Custom'}
 
 function set_up_player_actions(pid)
+    local atkgun = 0
     menu.divider(menu.player_root(pid), "LanceScript Reloaded")
     local ls_friendly = menu.list(menu.player_root(pid), "Lancescript: Friendly", {"lsfriendly"}, "")
     local ls_hostile = menu.list(menu.player_root(pid), "Lancescript: Hostile", {"lshostile"}, "")
@@ -2682,34 +2687,38 @@ function set_up_player_actions(pid)
         end
       end)
 
-    menu.slider(attackers_root, "Number of attackers", {"numattackers"}, "Number of attackers to send", 1, 30, 1, 1, function(s)
+    local num_attackers = 1
+    menu.slider(attackers_root, "Number of attackers", {"numattackers"}, "Number of attackers to send", 1, 10, 1, 1, function(s)
         num_attackers = s
     end)
 
-    local attacker_hashes = {-1788665315, 307287994, util.joaat('csb_stripper_02'), util.joaat("CS_BradCadaver")}
-    local options = {"Dog", "Mountain lion", "Stripper", "Brad", "Jets", "A-10s", "Cargo planes", "Bri-ish", "Clown", "Motorcycle gang", "Helicopter", "Custom", "Custom aircraft", "Custom car"}
+    local attacker_hashes = {1459905209, -287649847, 1264920838, -927261102, 1302784073, -1788665315, 307287994, util.joaat('csb_stripper_02'), util.joaat("CS_BradCadaver")}
+    local options = {"Jack Harlow", "Niko", "Chad", "Mani", "Lester", "Dog", "Mountain lion", "Stripper", "Brad", "Jets", "A-10s", "Cargo planes", "Bri-ish", "Clown", "Motorcycle gang", "Helicopter", "Custom", "Custom aircraft", "Custom car", "Clone player"}
     menu.list_action(attackers_root, "Send attacker", {"sendattacker"}, "", options, function(index, value, click_type)
             pluto_switch value do
                 case "Custom":
-                    send_attacker(util.joaat(atk_ped), pid, false)
+                    send_attacker(util.joaat(atk_ped), pid, false, num_attackers, atkgun)
                     break
                 case "Custom aircraft": 
-                    send_aircraft_attacker(util.joaat(atk_aircraft), -163714847, pid)
+                    send_aircraft_attacker(util.joaat(atk_aircraft), -163714847, pid, num_attackers)
                     break
                 case "Custom car":
-                    send_groundv_attacker(util.joaat(atk_car), 850468060, pid, true)
+                    send_groundv_attacker(util.joaat(atk_car), 850468060, pid, true, num_attackers, atkgun)
+                    break
+                case "Clone player": 
+                    send_attacker("CLONE", pid, false, num_attackers)
                     break
                 case "Jets":
-                    send_aircraft_attacker(util.joaat('lazer'), -163714847, pid)
+                    send_aircraft_attacker(util.joaat('lazer'), -163714847, pid, num_attackers)
                     break
                 case "A-10s": 
-                    send_aircraft_attacker(1692272545, -163714847, pid)
+                    send_aircraft_attacker(1692272545, -163714847, pid, num_attackers)
                     break
                 case "Cargo planes":
-                    send_aircraft_attacker(util.joaat("cargoplane"), -163714847, pid)
+                    send_aircraft_attacker(util.joaat("cargoplane"), -163714847, pid, num_attackers)
                     break
                 case "Helicopter": 
-                    send_aircraft_attacker(1543134283, util.joaat("mp_m_bogdangoon"), pid)
+                    send_aircraft_attacker(1543134283, util.joaat("mp_m_bogdangoon"), pid, num_attackers)
                     break
                 case "Clown": 
                     local player_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
@@ -2747,7 +2756,7 @@ function set_up_player_actions(pid)
                     end
                     break
                 case "Motorcycle gang": 
-                    send_groundv_attacker(-159126838, 850468060, pid, true)
+                    send_groundv_attacker(-159126838, 850468060, pid, true, num_attackers, atkgun)
                     break 
                 case "Bri-ish": 
                     local hash = 0x9C9EFFD8
@@ -2773,7 +2782,7 @@ function set_up_player_actions(pid)
                     end
                     break
                 pluto_default:
-                    send_attacker(attacker_hashes[index], pid, false)
+                    send_attacker(attacker_hashes[index], pid, false, num_attackers, atkgun)
             end
     end)
 
@@ -2924,6 +2933,10 @@ function set_up_player_actions(pid)
         end
     end)
 
+    menu.action(npctrolls_root, "Clone", {"clone"}, "practically every menu hates this and has protections against it, but i figured why not since i havent seen it in a while", function(click_type)
+        local new_clone = PED.CLONE_PED(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid), true, true, true)
+    end)
+
 
     --ba_prop_club_glass_trans
 
@@ -2944,7 +2957,7 @@ function set_up_player_actions(pid)
                 local success = true
                 while VEHICLE.ARE_ANY_VEHICLE_SEATS_FREE(veh) do
                     util.yield()
-                    --  sometimes peds fail to get seated, so we will have something to break after 10 attempts if things go south
+                    --  sometimes peds fail to get seated, so we will have something to break after 20 attempts if things go south
                     local iteration = 0
                     if iteration >= 20 then
                         util.toast("Failed to fully fill vehicle after 20 attempts. Please try again.")
@@ -3047,7 +3060,7 @@ end, function(on_command)
 end)
 
 local text_options = {"Nudes", "Random texts"}
-menu.list_action(aphostile_root, "Text", {"textallplayers"}, "", text_options, function(index, value, click_type)
+menu.list_action(apneutral_root, "Text", {"textallplayers"}, "", text_options, function(index, value, click_type)
     for k,pid in pairs(players.list(false, true, true)) do
         if index == 1 then
             for i=1, #sexts do
