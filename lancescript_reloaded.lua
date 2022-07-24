@@ -162,6 +162,48 @@ end
 
 -- UTILTITY FUNCTIONS
 
+-- CREDIT TO NOWIRY
+local function get_entity_owner(entity)
+	local pEntity = entities.handle_to_pointer(entity)
+	local addr = memory.read_long(pEntity + 0xD0)
+	return (addr ~= 0) and memory.read_byte(addr + 0x49) or -1
+end
+
+function world_to_screen_coords(x, y, z)
+    sc_x = memory.alloc(8)
+    sc_y = memory.alloc(8)
+    GRAPHICS.GET_SCREEN_COORD_FROM_WORLD_COORD(x, y, z, sc_x, sc_y)
+    local ret = {
+        x = memory.read_float(sc_x),
+        y = memory.read_float(sc_y)
+    }
+    return ret
+end
+
+function is_entity_a_projectile(hash)
+    local all_projectile_hashes = {
+        util.joaat("w_ex_vehiclemissile_1"),
+        util.joaat("w_ex_vehiclemissile_2"),
+        util.joaat("w_ex_vehiclemissile_3"),
+        util.joaat("w_ex_vehiclemissile_4"),
+        util.joaat("w_ex_vehiclem,tar"),
+        util.joaat("w_ex_apmine"),
+        util.joaat("w_ex_arena_landmine_01b"),
+        util.joaat("w_ex_birdshat"),
+        util.joaat("w_ex_grenadefrag"),
+        util.joaat("w_ex_grenadesmoke"),
+        util.joaat("w_ex_molotov"),
+        util.joaat("w_ex_pe"),
+        util.joaat("w_ex_pipebomb"),
+        util.joaat("w_ex_snowball"),
+        util.joaat("w_lr_rpg_rocket"),
+        util.joaat("w_lr_homing_rocket"),
+        util.joaat("w_lr_firew,k_rocket"),
+        util.joaat("xm_prop_x17_silo_rocket_01")
+    }
+    return table.contains(all_projectile_hashes, hash)
+end
+
 timed_thread = util.create_thread(function (thr)
     tlightstate = 0
     while true do
@@ -299,6 +341,20 @@ function to_rgb(r, g, b, a)
     color.b = b
     color.a = a
     return color
+end
+
+-- credit to nowiry
+function set_entity_face_entity(entity, target, usePitch)
+    local pos1 = ENTITY.GET_ENTITY_COORDS(entity, false)
+    local pos2 = ENTITY.GET_ENTITY_COORDS(target, false)
+    local rel = v3.new(pos2)
+    rel:sub(pos1)
+    local rot = rel:toRot()
+    if not usePitch then
+        ENTITY.SET_ENTITY_HEADING(entity, rot.z)
+    else
+        ENTITY.SET_ENTITY_ROTATION(entity, rot.x, rot.y, rot.z, 2, 0)
+    end
 end
 
 -- pre-made rgb's
@@ -751,50 +807,59 @@ menu.action(my_vehicle_movement_root, "Vehicle 180", {"vehicle180"}, "Turns your
 end)
 
 v_f_previous_car = 0
-fly_speed = 10
+vflyspeed = 10
 v_fly = false
 v_f_plane = 0
 
+menu.slider(my_vehicle_movement_root, "Vehicle fly speed", {"vflyspeed"}, "", 1, 3000, 3, 1, function(s)
+    vflyspeed = s
+end)
+
 local ls_vehiclefly = menu.toggle_loop(my_vehicle_movement_root, "Vehicle fly", {"vehiclefly"}, "Makes your vehicle fly. WASD as usual, mouse to aim, space and ctrl to ascend and descend", function(on)
     if player_cur_car ~= 0 and PED.IS_PED_IN_ANY_VEHICLE(players.user_ped(), true) then
-        --SET_ENTITY_ROTATION(Entity entity, float pitch, float roll, float yaw, int rotationOrder, BOOL p5)
+        ENTITY.SET_ENTITY_MAX_SPEED(player_cur_car, 3000.0)
         local c = CAM.GET_GAMEPLAY_CAM_ROT(0)
         CAM._DISABLE_VEHICLE_FIRST_PERSON_CAM_THIS_FRAME()
         ENTITY.SET_ENTITY_ROTATION(player_cur_car, c.x, c.y, c.z, 0, true)
         any_c_pressed = false
         --W
+        local x_vel = 0.0
+        local y_vel = 0.0
+        local z_vel = 0.0
         if PAD.IS_CONTROL_PRESSED(32, 32) then
-            ENTITY.APPLY_FORCE_TO_ENTITY(player_cur_car, 3, 0.0, 100.0, 0.0, 0.0, 0.0, 0.0, 0, true, true, true, false, true)
-            any_c_pressed = true
+            x_vel = vflyspeed
         end 
         --A
         if PAD.IS_CONTROL_PRESSED(63, 63) then
-            ENTITY.APPLY_FORCE_TO_ENTITY(player_cur_car, 3, -20.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, true, true, true, false, true)
-            any_c_pressed = false
+            y_vel = -vflyspeed
         end
         --S
         if PAD.IS_CONTROL_PRESSED(33, 33) then
-            ENTITY.APPLY_FORCE_TO_ENTITY(player_cur_car, 3, 0.0, -50.0, 0.0, 0.0, 0.0, 0.0, 0, true, true, true, false, true)
-            any_c_pressed = false
+            x_vel = -vflyspeed
         end
         --D
         if PAD.IS_CONTROL_PRESSED(64, 64) then
-            ENTITY.APPLY_FORCE_TO_ENTITY(player_cur_car, 3, 20.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, true, true, true, false, true)
-            any_c_pressed = false
+            y_vel = vflyspeed
         end
-        if PAD.IS_CONTROL_PRESSED(22, 22) then
-            ENTITY.APPLY_FORCE_TO_ENTITY(player_cur_car, 3, 0.0, 0.0, 50.0, 0.0, 0.0, 0.0, 0, true, true, true, false, true)
-            any_c_pressed = false
-        end
-        if PAD.IS_CONTROL_PRESSED(36, 36) then
-            ENTITY.APPLY_FORCE_TO_ENTITY(player_cur_car, 3, 0.0, 0.0, -50.0, 0.0, 0.0, 0.0, 0, true, true, true, false, true)
-            any_c_pressed = false
-        end
-        if not any_c_pressed then
+        if x_vel == 0.0 and y_vel == 0.0 and z_vel == 0.0 then
             ENTITY.SET_ENTITY_VELOCITY(player_cur_car, 0.0, 0.0, 0.0)
+        else
+            local angs = ENTITY.GET_ENTITY_ROTATION(player_cur_car, 0)
+            local spd = ENTITY.GET_ENTITY_VELOCITY(player_cur_car)
+            if angs.x > 1.0 and spd.z < 0 then
+                z_vel = -spd.z 
+            else
+                z_vel = 0.0
+            end
+            ENTITY.APPLY_FORCE_TO_ENTITY(player_cur_car, 3, y_vel, x_vel, z_vel, 0.0, 0.0, 0.0, 0, true, true, true, false, true)
         end
     end
-end)
+end, function()
+    if player_cur_car ~= 0 then
+        ENTITY.SET_ENTITY_HAS_GRAVITY(player_cur_car, true)
+    end
+end
+)
 
 -- END MOVEMENT ROOT
 
@@ -868,8 +933,7 @@ end, function(on_stop)
         ENTITY.SET_ENTITY_RENDER_SCORCHED(player_cur_car, false)
     end
 end)
-
-
+--SET_VEHICLE_DOOR_CONTROL
 
 tesla_ped = 0
 menu.action(my_vehicle_root, "Tesla summon", {"teslasummon"}, "Have your car drive itself to you. Breaks a lot for multiple reasons but it was too fun to scrap.", function(click_type)
@@ -1175,13 +1239,52 @@ end)
 -- OBJECTS
 
 objects_thread = util.create_thread(function (thr)
+    local projectile_blips = {}
     while true do
+        for k,b in pairs(projectile_blips) do
+            if HUD.GET_BLIP_INFO_ID_ENTITY_INDEX(b) == 0 then 
+                util.remove_blip(b) 
+                projectile_blips[k] = nil
+            end
+        end
         if object_uses > 0 then
             if show_updates then
                 ls_log("Object pool is being updated")
             end
             all_objects = entities.get_all_objects_as_handles()
             for k,obj in pairs(all_objects) do
+                --- PROJECTILE SHIT
+                if is_entity_a_projectile(ENTITY.GET_ENTITY_MODEL(obj)) then
+                    if projectile_warn then
+                        local c = ENTITY.GET_ENTITY_COORDS(obj)
+                        local screen_c = world_to_screen_coords(c.x, c.y, c.z)
+                        local color = to_rgb(255, 0, 0, 255)
+                        --directx.draw_text(screen_c.x, screen_c.y, "!", 5, 0.100, color, false)
+                        request_texture_dict_load('visualflow')
+                        GRAPHICS.DRAW_SPRITE('visualflow', 'crosshair', screen_c.x, screen_c.y, 0.02, 0.03, 0.0, 255, 0, 0, 255, true, 0)
+                    end
+                    if projectile_cleanse then 
+                        entities.delete(obj)
+                    end
+                    if projectile_spaz then
+                        --local target = entity.get_entity_owner(obj) 
+                        local strength = 20
+                        ENTITY.APPLY_FORCE_TO_ENTITY(obj, 1, math.random(-strength, strength), math.random(-strength, strength), math.random(-strength, strength), 0.0, 0.0, 0.0, 1, true, false, true, true, true)
+                    end
+                    if slow_projectiles then
+                        --ENTITY.SET_ENTITY_VELOCITY(obj, 0.0, 0.0, 0.0)
+                        ENTITY.SET_ENTITY_MAX_SPEED(obj, 0.5)
+                    end
+                    if blip_projectiles then
+                        if HUD.GET_BLIP_FROM_ENTITY(obj) == 0 then
+                            local proj_blip = HUD.ADD_BLIP_FOR_ENTITY(obj)
+                            HUD.SET_BLIP_SPRITE(proj_blip, 443)
+                            HUD.SET_BLIP_COLOUR(proj_blip, 75)
+                            projectile_blips[#projectile_blips + 1] = proj_blip 
+                        end
+                    end
+                end
+                --------------
                 if l_e_o_on then
                     local size = get_model_size(ENTITY.GET_ENTITY_MODEL(obj))
                     if size.x > l_e_max_x or size.y > l_e_max_y or size.z > l_e_max_y then
@@ -1677,8 +1780,65 @@ end)
 
 -- WORLD
 protected_areas_root = menu.list(world_root, "Protected areas", {"lancescriptprotectedareas"}, "Areas that are gated to only certain people, else the people are killed.")
+projectiles_root = menu.list(world_root, "Projectiles", {"lancescriptprojectiles"}, "")
 entity_limits_root = menu.list(protections_root, "Entity limits", {"lancescriptentitylimits"}, "Limit entity properties. Can be resource intensive since it needs access to 2 entity pools at once.")
 active_protected_areas_root = menu.list(protected_areas_root, "Active areas", {"lancescriptactiveprotectedareas"}, "Areas that are currently defined as protected.")
+
+projectile_warn = false
+menu.toggle(projectiles_root, "Draw warning", {"projectilewarning"}, "Draws a red box over projectiles to warn you of their existence", function(on)
+    projectile_warn = on
+    mod_uses("object", if on then 1 else -1)
+end)
+
+projectile_cleanse = false
+menu.toggle(projectiles_root, "Delete projectiles", {"noprojectiles"}, "Easily piss off an entire lobby.", function(on)
+    projectile_cleanse = on
+    mod_uses("object", if on then 1 else -1)
+end)
+
+projectile_spaz = false
+menu.toggle(projectiles_root, "Projectile spaz", {"projectilespaz"}, "Makes all projectiles follow a very unstable, random path, making them extremely unlikely to hit their mark.", function(on)
+    projectile_spaz = on
+    mod_uses("object", if on then 1 else -1)
+end)
+
+slow_projectiles = false
+menu.toggle(projectiles_root, "Extremely slow projectiles", {"slowprojectiles"}, "", function(on)
+    slow_projectiles = on
+    mod_uses("object", if on then 1 else -1)
+end)
+
+blip_projectiles = false
+menu.toggle(projectiles_root, "Blips for projectiles", {"blipprojectiles"}, "", function(on)
+    blip_projectiles = on
+    mod_uses("object", if on then 1 else -1)
+end)
+
+function get_closest_projectile()
+    local closest = 100000000000
+    local closest_obj = 0
+    for k,obj in pairs(entities.get_all_objects_as_handles()) do 
+        if is_entity_a_projectile(ENTITY.GET_ENTITY_MODEL(obj)) then
+            local c = ENTITY.GET_ENTITY_COORDS(obj) 
+            local c2 = ENTITY.GET_ENTITY_COORDS(players.user_ped())
+            local d = MISC.GET_DISTANCE_BETWEEN_COORDS(c.x, c.y, c.z, c2.x, c2.y, c2.z, true)
+            if d < closest then
+                closest_obj = obj
+                closest = d
+            end 
+        end
+    end
+    return closest_obj
+end
+
+menu.action(projectiles_root, "Ride closest projectile", {"attachtonearestproj"}, ".", function(on)
+    closest_obj = get_closest_projectile()
+    if closest_obj ~= 0 then 
+        util.toast("If your ped goes invisible, suicide to fix it.")
+        ENTITY.ATTACH_ENTITY_TO_ENTITY(players.user_ped(), closest_obj, 0, 0.0, -0.20, 2.00, 1.0, 1.0,1, true, true, true, false, 0, true)
+    end
+end)
+
 
 l_e_v_on = false
 l_e_o_on = false
@@ -1751,7 +1911,7 @@ menu.action(protected_areas_root, "Define protected area", {"definepa"}, "Define
     protected_areas[pa_next] = this_area
     local new_protected_area = menu.list(active_protected_areas_root, tostring(pa_next), {"protectedarea" .. pa_next}, "View and modify this area")
     menu.action(new_protected_area, "Delete", {"deletepa" .. tostring(pa_next)}, "Delete this area.", function(click_type)
-        HUD.SET_BLIP_ALPHA(blip, 0)
+        util.remove_blip(blip)
         protected_areas[pa_next] = nil
         menu.delete(new_protected_area)
         util.toast("Protected area deleted.")
@@ -1805,6 +1965,42 @@ rapidtraffic = false
 menu.toggle(world_root, "Rapid traffic lights", {"rapidtraffic"}, "rapidly alters the traffic lights. does not affect traffic behavior.", function(on)
     rapidtraffic = on
     mod_uses("object", if on then 1 else -1)
+end)
+
+local angry_planes = false
+local angry_planes_tar = 0
+function start_angryplanes_thread()
+    util.create_thread(function()
+        local v_hashes = {util.joaat('lazer'), util.joaat('jet'), util.joaat('cargoplane'), util.joaat('titan'), util.joaat('luxor'), util.joaat('seabreeze'), util.joaat('vestra'), util.joaat('volatol'), util.joaat('tula'), util.joaat('buzzard'), util.joaat('avenger')}
+        if angry_planes_tar == 0 then 
+            angry_planes_tar = players.user_ped()
+        end
+        while true do
+            if not angry_planes then 
+                util.stop_thread()
+            end
+            local p_hash = util.joaat('s_m_m_pilot_01')
+            local radius = 200
+            local c = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(angry_planes_tar, math.random(-radius, radius), math.random(-radius, radius), math.random(600, 800))
+            local pick = v_hashes[math.random(1, #v_hashes)]
+            request_model_load(pick)
+            local aircraft = entities.create_vehicle(pick, c, math.random(0, 270))
+            set_entity_face_entity(aircraft, angry_planes_tar, true)
+            VEHICLE.SET_VEHICLE_ENGINE_ON(aircraft, true, true, false)
+            VEHICLE.SET_HELI_BLADES_FULL_SPEED(aircraft)
+            VEHICLE.SET_VEHICLE_FORWARD_SPEED(aircraft, VEHICLE.GET_VEHICLE_ESTIMATED_MAX_SPEED(aircraft)+1000.0)
+            VEHICLE.SET_VEHICLE_OUT_OF_CONTROL(aircraft, true, true)
+            --local blip = HUD.ADD_BLIP_FOR_ENTITY(aircraft)
+            --HUD.SET_BLIP_SPRITE(blip, 90)
+            --HUD.SET_BLIP_COLOUR(blip, 75)
+            util.yield(5000)
+        end
+    end)
+end
+
+menu.toggle(world_root, "Angry planes", {"angryplanes"}, "The classic, but I thought that missiles were cheesy so its really just kamikazes.", function(on)
+    angry_planes = on
+    start_angryplanes_thread()
 end)
 
 
@@ -1873,8 +2069,20 @@ end)
 
 --LOCK_MINIMAP_ANGLE(int angle)
 
+function alert_thuds()
+    util.create_thread(function()
+        AUDIO.PLAY_SOUND_FRONTEND(-1, "Hit_In", "PLAYER_SWITCH_CUSTOM_SOUNDSET")
+        util.yield(500)
+        AUDIO.PLAY_SOUND_FRONTEND(-1, "Hit_In", "PLAYER_SWITCH_CUSTOM_SOUNDSET")
+        util.yield(500)
+        AUDIO.PLAY_SOUND_FRONTEND(-1, "Hit_In", "PLAYER_SWITCH_CUSTOM_SOUNDSET")
+    end)
+end
 
+fake_alert_delay = 0
 function show_custom_alert_until_enter(l1)
+    util.yield(fake_alert_delay)
+    alert_thuds()
     poptime = os.time()
     while true do
         if PAD.IS_CONTROL_JUST_RELEASED(18, 18) then
@@ -1901,13 +2109,18 @@ function show_custom_alert_until_enter(l1)
     end
 end
 
+
+menu.slider(fakemessages_root, "Alert delay", {"alertdelay"}, "How long, in seconds, between you pressing the action to trigger the alert and the alert showing. Use to professionally prank your friends into thinking you got banned.", 0, 300, 0, 1, function(s)
+    fake_alert_delay = s*1000
+end)
+
 local fake_suspend_date = "July 15, 2000"
 menu.text_input(fakemessages_root, "Custom suspension date", {"customsuspensiondate"}, "Enter a suspension date for your fake suspension to end on", function(on_input)
     fake_suspend_date = on_input
 end, "July 15, 2000")
 
 local custom_alert = "hello world"
-menu.text_input(fakemessages_root, "Custom alert text", {"customsuspensiondate"}, "Enter what your fake alert should display", function(on_input)
+menu.text_input(fakemessages_root, "Custom alert text", {"customalerttext"}, "Enter what your fake alert should display", function(on_input)
     custom_alert = on_input
 end, "hello world")
 
@@ -1933,9 +2146,7 @@ menu.list_action(fakemessages_root, "Fake alert", {"fakealert"}, "", alert_optio
         case 6:
             show_custom_alert_until_enter(custom_alert)
             break
-
     end
-
 end)
 
 -- PLAYERS AND TROLLING
@@ -2021,6 +2232,7 @@ function ram_ped_with(ped, vehicle, offset, sog)
     front.y = front['y']
     front.z = front['z']
     local veh = entities.create_vehicle(vehicle, front, ENTITY.GET_ENTITY_HEADING(ped)+180)
+    set_entity_face_entity(veh, ped, true)
     if ram_onground then
         OBJECT.PLACE_OBJECT_ON_GROUND_PROPERLY(veh)
     end
@@ -2127,6 +2339,7 @@ end
 
 givegun = false
 function send_attacker(hash, pid, givegun, num_attackers, atkgun)
+    local this_attacker
     local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
     coords = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(target_ped, 0.0, -3.0, 0.0)
     coords.x = coords['x']
@@ -2137,27 +2350,28 @@ function send_attacker(hash, pid, givegun, num_attackers, atkgun)
     end
     for i=1, num_attackers do
         if hash ~= 'CLONE' then
-            local attacker = entities.create_ped(28, hash, coords, math.random(0, 270))
+            this_attacker = entities.create_ped(28, hash, coords, math.random(0, 270))
         else
-            local attacker = PED.CLONE_PED(target_ped, true, true, true)
+            this_attacker = PED.CLONE_PED(target_ped, true, true, true)
         end
-        local blip = HUD.ADD_BLIP_FOR_ENTITY(attacker)
+        local blip = HUD.ADD_BLIP_FOR_ENTITY(this_attacker)
         HUD.SET_BLIP_COLOUR(blip, 61)
         if godmodeatk then
-            ENTITY.SET_ENTITY_INVINCIBLE(attacker, true)
+            ENTITY.SET_ENTITY_INVINCIBLE(this_attacker, true)
         end
-        TASK.TASK_COMBAT_PED(attacker, target_ped, 0, 16)
-        PED.SET_PED_ACCURACY(attacker, 100.0)
-        PED.SET_PED_COMBAT_ABILITY(attacker, 2)
-        PED.SET_PED_AS_ENEMY(attacker, true)
-        PED.SET_PED_FLEE_ATTRIBUTES(attacker, 0, false)
-        PED.SET_PED_COMBAT_ATTRIBUTES(attacker, 46, true)
+        TASK.TASK_SET_BLOCKING_OF_NON_TEMPORARY_EVENTS(this_attacker, true)
+        PED.SET_PED_ACCURACY(this_attacker, 100.0)
+        PED.SET_PED_COMBAT_ABILITY(this_attacker, 2)
+        PED.SET_PED_AS_ENEMY(this_attacker, true)
+        PED.SET_PED_FLEE_ATTRIBUTES(this_attacker, 0, false)
+        PED.SET_PED_COMBAT_ATTRIBUTES(this_attacker, 46, true)
+        TASK.TASK_COMBAT_PED(this_attacker, target_ped, 0, 16)
         if atkgun ~= 0 then
-            WEAPON.GIVE_WEAPON_TO_PED(attacker, atkgun, 1000, false, true)
+            WEAPON.GIVE_WEAPON_TO_PED(this_attacker, atkgun, 1000, false, true)
         end
-        PED.SET_PED_MAX_HEALTH(attacker, atkhealth)
-        ENTITY.SET_ENTITY_HEALTH(attacker, atkhealth)
-        PED.SET_PED_SUFFERS_CRITICAL_HITS(attacker, atk_critical_hits)
+        PED.SET_PED_MAX_HEALTH(this_attacker, atkhealth)
+        ENTITY.SET_ENTITY_HEALTH(this_attacker, atkhealth)
+        PED.SET_PED_SUFFERS_CRITICAL_HITS(this_attacker, atk_critical_hits)
     end
 end
 
@@ -2246,6 +2460,7 @@ vehicle_hashes = {util.joaat("dune2"), util.joaat("speedo2"), util.joaat("kriege
 vehicle_names = {'Space docker', 'Clown van', 'Krieger', 'Kuruma', 'Insurgent', 'Neon', 'Akula', 'Alpha-Z1', 'Rogue', 'Oppressor MK2', 'Hydra', 'Custom'}
 
 function set_up_player_actions(pid)
+    local childlock
     local atkgun = 0
     menu.divider(menu.player_root(pid), "LanceScript Reloaded")
     local ls_friendly = menu.list(menu.player_root(pid), "Lancescript: Friendly", {"lsfriendly"}, "")
@@ -2257,9 +2472,10 @@ function set_up_player_actions(pid)
     playerveh_root = menu.list(ls_hostile, "Vehicle", {"playerv"}, "Vehicle actions with varying degrees of success depending on numerous factors.")
     npctrolls_root = menu.list(ls_hostile, "NPC trolling", {"npctrolls"}, "")
     attackers_root = menu.list(npctrolls_root, "Attackers", {"lancescriptattackers"}, "Send attackers")
+    chattrolls_root = menu.list(ls_hostile, "Chat trolling", {"chattrolls"}, "")
     ram_root = menu.list(ls_hostile, "Ram", {"ram"}, "")
 
-    local tp_options = {"To me", "To waypoint", "Maze Bank", "Underwater", "High up", "LSC", "SCP-173", "Large cell"}
+    local tp_options = {"To me", "To waypoint", "Maze Bank", "Underwater", "High up", "LSC", "SCP-173", "Large cell", "Underwater, and apply child lock"}
     menu.list_action(playerveh_root, "Teleport", {"tpv"}, "", tp_options, function(index, value, click_type)
         local car = PED.GET_VEHICLE_PED_IS_IN(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid), true)
         if car ~= 0 then
@@ -2301,6 +2517,12 @@ function set_up_player_actions(pid)
                     c.x = 1737.1896
                     c.y = 2634.897
                     c.z = 45.56497
+                    break
+                case 9: 
+                    menu.set_value(childlock, true)
+                    c.x = 4497.2207
+                    c.y = 8028.3086
+                    c.z = -32.635174
                     break
             end
             tp_player_car_to_coords(pid, c)
@@ -2355,7 +2577,8 @@ function set_up_player_actions(pid)
         local car = PED.GET_VEHICLE_PED_IS_IN(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid), true)
         if car ~= 0 then
             request_control_of_entity(car)
-            ENTITY.APPLY_FORCE_TO_ENTITY(car, 2, 0, 0, 10000000, 0, 0, 0, 0, true, false, true, false, true)
+            ENTITY.SET_ENTITY_MAX_SPEED(car, 10000000.0)
+            ENTITY.APPLY_FORCE_TO_ENTITY(car, 1,  0.0, 0.0, 10000000, 0, 0, 0, 0, true, false, true, false, true)
         end
     end)
 
@@ -2364,8 +2587,19 @@ function set_up_player_actions(pid)
         entities.delete(car)
     end)
 
-    local options = {"Open", "Close", "Break"}
-    menu.list_action(playerveh_root, "Door control", {"vdoorctrl"}, "", options, function(index, value, click_type)
+    childlock = menu.toggle_loop(playerveh_root, "Child lock", {"childlock"}, "", function()
+        local car = PED.GET_VEHICLE_PED_IS_IN(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid), true)
+        if car ~= 0 then
+            VEHICLE.SET_VEHICLE_DOORS_LOCKED(car, 4)
+        end
+    end, function()
+        if car ~= 0 then
+            VEHICLE.SET_VEHICLE_DOORS_LOCKED(car, 1)
+        end
+    end)
+
+    local door_options = {"Open", "Close", "Break"}
+    menu.list_action(playerveh_root, "Door control", {"vdoorctrl"}, "", door_options, function(index, value, click_type)
         local car = PED.GET_VEHICLE_PED_IS_IN(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid), true)
         if car ~= 0 then
             request_control_of_entity(car)
@@ -2400,6 +2634,7 @@ function set_up_player_actions(pid)
         if car ~= 0 then
             request_control_of_entity(car)
             VEHICLE.MODIFY_VEHICLE_TOP_SPEED(car, s)
+            ENTITY.SET_ENTITY_MAX_SPEED(car, s)
         end
     end)
 
@@ -2454,6 +2689,28 @@ function set_up_player_actions(pid)
             for i=0, 7 do
                 VEHICLE.SET_VEHICLE_TYRE_BURST(car, i, true, 1000.0)
             end
+        end
+    end)
+    
+    menu.action(playerveh_root, "Turn vehicle around", {"180v"}, "", function(on)
+        local car = PED.GET_VEHICLE_PED_IS_IN(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid), true)
+        if car ~= 0 then
+            request_control_of_entity(car)
+            local rot = ENTITY.GET_ENTITY_ROTATION(car, 0)
+            local vel = ENTITY.GET_ENTITY_VELOCITY(car)
+            ENTITY.SET_ENTITY_ROTATION(car, rot['x'], rot['y'], rot['z']+180, 0, true)
+            ENTITY.SET_ENTITY_VELOCITY(car, -vel['x'], -vel['y'], vel['z'])
+        end
+    end)
+
+    menu.action(playerveh_root, "Flip vehicle", {"1802v"}, "", function(on)
+        local car = PED.GET_VEHICLE_PED_IS_IN(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid), true)
+        if car ~= 0 then
+            request_control_of_entity(car)
+            local rot = ENTITY.GET_ENTITY_ROTATION(car, 0)
+            local vel = ENTITY.GET_ENTITY_VELOCITY(car)
+            ENTITY.SET_ENTITY_ROTATION(car, rot['x'], rot['y']+180, rot['z'], 0, true)
+            ENTITY.SET_ENTITY_VELOCITY(car, -vel['x'], -vel['y'], vel['z'])
         end
     end)
 
@@ -2561,8 +2818,8 @@ function set_up_player_actions(pid)
     end)
 
     local explo_types = {13, 12, 70}
-    local options = {"Water Jet", "Fire Jet", "Launch player"}
-    local explo_type_slider = menu.list_action(explosions_root, "Explosion type", {"explotype"}, "", options, function(index, value, click_type)
+    local explo_options = {"Water Jet", "Fire Jet", "Launch player"}
+    local explo_type_slider = menu.list_action(explosions_root, "Explosion type", {"explotype"}, "", explo_options, function(index, value, click_type)
         local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         local coords = ENTITY.GET_ENTITY_COORDS(target_ped, false)
         e_type = explo_types[value]
@@ -2582,8 +2839,8 @@ function set_up_player_actions(pid)
     end)
 
     local p_types = {100416529, 126349499}
-    local options = {"Bullet", "Snowball"}
-    menu.list_action(explosions_root, "Projectile type", {"projectiletype"}, "", options, function(index, value, click_type)
+    local projectile_options = {"Bullet", "Snowball"}
+    menu.list_action(explosions_root, "Projectile type", {"projectiletype"}, "", projectile_options, function(index, value, click_type)
         local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         local target = ENTITY.GET_ENTITY_COORDS(target_ped, false)
         local owner = players.user_ped()
@@ -2693,8 +2950,8 @@ function set_up_player_actions(pid)
     end)
 
     local attacker_hashes = {1459905209, -287649847, 1264920838, -927261102, 1302784073, -1788665315, 307287994, util.joaat('csb_stripper_02'), util.joaat("CS_BradCadaver")}
-    local options = {"Jack Harlow", "Niko", "Chad", "Mani", "Lester", "Dog", "Mountain lion", "Stripper", "Brad", "Jets", "A-10s", "Cargo planes", "Bri-ish", "Clown", "Motorcycle gang", "Helicopter", "Custom", "Custom aircraft", "Custom car", "Clone player"}
-    menu.list_action(attackers_root, "Send attacker", {"sendattacker"}, "", options, function(index, value, click_type)
+    local atk_options = {"Jack Harlow", "Niko", "Chad", "Mani", "Lester", "Dog", "Mountain lion", "Stripper", "Brad", "Jets", "A-10s", "Cargo planes", "Bri-ish", "Clown", "Motorcycle gang", "Helicopter", "Custom", "Custom aircraft", "Custom car", "Clone player"}
+    menu.list_action(attackers_root, "Send attacker", {"sendattacker"}, "", atk_options, function(index, value, click_type)
             pluto_switch value do
                 case "Custom":
                     send_attacker(util.joaat(atk_ped), pid, false, num_attackers, atkgun)
@@ -2905,7 +3162,15 @@ function set_up_player_actions(pid)
         util.yield(500)
     end)
 
-    menu.action(ls_hostile, "Send schizo message", {"schizomessage"}, "Sends them a chat message that looks normal, but only they can see it. Makes them look schizophrenic if they respond.", function(click_type)
+    menu.action(ls_hostile, "Mark as angry planes target", {"angryptarget"}, "Sets this user as the angry planes target. You will still need to turn on angry planes.", function(on_input)
+        angry_planes_tar = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
+        if not angry_planes then
+            util.toast("I turned angry planes on for you!")
+            menu.trigger_commands("angryplanes on")
+        end
+    end)
+
+    menu.action(chattrolls_root, "Send schizo message", {"schizomessage"}, "Sends them a chat message that looks normal, but only they can see it. Makes them look schizophrenic if they respond.", function(click_type)
         util.toast("Please input the chat")
         menu.show_command_box("schizomessage" .. PLAYER.GET_PLAYER_NAME(pid) .. " ")
         end, function(on_command)
@@ -2918,7 +3183,7 @@ function set_up_player_actions(pid)
     end)
 
     
-    menu.action(ls_hostile, "Invisible spoof chat", {"invisspoof"}, "Send a text spoofing as this player, but the player won\'t see it so they wont know they\'re spoofed.", function(click_type)
+    menu.action(chattrolls_root, "Invisible spoof chat", {"invisspoof"}, "Send a text spoofing as this player, but the player won\'t see it so they wont know they\'re spoofed.", function(click_type)
         util.toast("Please input what you want this user to say")
         menu.show_command_box("invisspoof" .. PLAYER.GET_PLAYER_NAME(pid) .. " ")
     end, function(on_command)
@@ -2931,6 +3196,12 @@ function set_up_player_actions(pid)
                 end
             end
         end
+    end)
+
+    menu.action(chattrolls_root, "Fake RAC detection chat", {"fakerac"}, "User triggered a detection: Rockstar Anti Cheat (C1)", function(click_type)
+        local types = {'C1', 'I3', 'I1', 'N3', 'D3', 'S3'}
+        local det_type = types[math.random(1, #types)]
+        chat.send_message('> ' .. PLAYER.GET_PLAYER_NAME(pid) .. " triggered a detection: Rockstar Anti Cheat (" .. det_type .. ")", false, true, true)
     end)
 
     menu.action(npctrolls_root, "Clone", {"clone"}, "practically every menu hates this and has protections against it, but i figured why not since i havent seen it in a while", function(click_type)
@@ -3012,7 +3283,7 @@ menu.toggle(aphostile_root, "Broke radar", {"brokeradar"}, "Shows players who ar
         broke_radar = false
         mod_uses("player", -1)
         for plyr,blip in pairs(broke_blips) do
-            HUD.SET_BLIP_ALPHA(blip, 0)
+            util.remove_blip(blip)
             broke_blips[plyr] = nil
         end
     end
@@ -3232,7 +3503,7 @@ players.dispatch_on_join()
 players.on_leave(function(pid)
     if broke_blips[pid] ~= nil then
         broke_blips[pid] = nil
-        HUD.SET_BLIP_ALPHA(broke_blips[pid], 0)
+        util.remove_blip(broke_blips[pid])
     end
     if pid ~= players.user() then
         --pass?
@@ -3343,7 +3614,7 @@ players_thread = util.create_thread(function (thr)
                     else
                         if broke_blips[pid] ~= nil then
                             blip = broke_blips[pid]
-                            HUD.SET_BLIP_ALPHA(blip, 0)
+                            util.remove_blip(blip)
                             broke_blips[pid] = nil
                         end
                     end
@@ -3366,6 +3637,11 @@ end)
 menu.toggle(lancescript_root, "Debug", {"lancescriptdebug"}, "Spams console and toasts with useful debug info.", function(on)
     ls_debug = on
 end)
+
+
+
+--OPEN_ONLINE_POLICIES_MENU
+
 
 -- CREDITS
 lancescript_credits = menu.list(lancescript_root, "Credits", {"lancescriptcredits"}, "")
@@ -3688,7 +3964,7 @@ while true do
             VEHICLE.SET_VEHICLE_DOORS_LOCKED_FOR_ALL_PLAYERS(lastcar, false)
             VEHICLE.START_VEHICLE_HORN(lastcar, 1000, util.joaat("NORMAL"), false)
             tesla_ped = 0
-            HUD.SET_BLIP_ALPHA(tesla_blip, 0)
+            util.remove_blip(tesla_blip)
         end
     end
     util.yield()
