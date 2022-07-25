@@ -1,5 +1,5 @@
 -- LANCESCRIPT RELOADED
--- version 4.4.5, unless i forgot to update this line loll
+-- version 6.4.5, unless i forgot to update this line loll
 util.require_natives("1640181023")
 gta_labels = require('all_labels')
 all_labels = gta_labels.all_labels
@@ -91,11 +91,28 @@ combat_root = menu.list(self_root, "My combat/weapons", {"lancescriptcombat"}, "
 online_root = menu.list(menu.my_root(), "Online", {"lancescriptonline"}, "Online")
 protections_root = menu.list(online_root, "Protections", {"lancescriptprotections"}, "Protections")
 lancechat_root = menu.list(online_root, "LanceChat", {"lancechat"}, "A \"secret\" chat for LanceScript owners. Utilizes normal chat to send encoded messages. It is like base64 but not quite. This is not the same as \"encrypted\" so don\'t be an idiot.")
-
+chat_presets_root = menu.list(online_root, "Chat presets", {"lancescriptchatpresets"}, "Chat presets")
 local players_shortcut_command = menu.ref_by_path('Players', 37)
 menu.action(menu.my_root(), "Players shortcut", {}, "Quickly opens session players list, for convenience", function(click_type)
     menu.trigger_command(players_shortcut_command)
 end)
+
+function get_stat_by_name(stat_name, character)
+    if character then 
+        stat_name = "MP" .. tostring(util.get_char_slot()) .. "_" .. stat_name 
+    end
+    local out = memory.alloc(8)
+    STATS.STAT_GET_INT(MISC.GET_HASH_KEY(stat_name), out, -1)
+    return memory.read_int(out)
+end
+
+function get_prostitutes_solicited(pid)
+    return memory.read_int(memory.script_global(1853131 + 1 + (pid * 888) + 205 + 54))
+end
+
+function get_lapdances_amount(pid) 
+    return memory.read_int(memory.script_global(1853131 + 1 + (pid * 888) + 205 + 55))
+end
 
 ap_root = menu.list(online_root, "All players", {"lancescriptonline"}, "Players")
 apfriendly_root = menu.list(ap_root, "Friendly", {"apfriendly"}, "")
@@ -299,18 +316,23 @@ menu.toggle(lancechat_root, "Receive Lance chats", {"receivelancecahts"}, "Autom
     receive_lancechats = on
 end, true)
 
-function hasValue( tbl, str )
-    local f = false
-    for i = 1, #tbl do
-        if type( tbl[i] ) == "table" then
-            f = hasValue( tbl[i], str )  --  return value from recursion
-            if f then break end  --  if it returned true, break out of loop
-        elseif tbl[i] == str then
-            return true
-        end
-    end
-    return f
+menu.action(chat_presets_root, "Real localized \"DOX\"", {}, "Sends a LOCALIZED \"DOX\" to everyone. Everyone will think you are singling them out when in reality, everyone sees their own info and nobody sees someone elses.", function(click_type)
+    chat.send_message("${name}: ${ip} | ${geoip.city}, ${geoip.region}, ${geoip.country}", false, true, true)
+end)
+
+local chat_presets = {
+    ['Money drops useless'] = "I could give you money, but the amount you would receive for the time spent on it is useless. Your best bet is to just buy your own menu and use the recovery options in it.",
+    ['Stand on top'] = "Stand on top!",
+    ['LanceScript on top!'] = "LanceScript on top!",
+    ['L + ratio ..'] = "L + ratio + u fell off + ur british + who asked + no u + deez nutz + radio + don't care + caught in 4k + cope + seethe + gg + grow the fuck up + silver elite + ligma + taco bell dorito crunch + think outside the bun bitch",
+    ['You bought 2take1...'] = "Around 300,000 years of evolution yet it led us to you, someone who actually bought 2take1..."
+}
+for k,v in pairs(chat_presets) do
+    menu.action(chat_presets_root, k, {}, "\"" .. v .. "\"", function(click_type)
+        chat.send_message(v, false, true, true)
+    end)
 end
+
 
 memory.write_string(util_alloc, b64_dec("nZqek5CRmv=="))
 
@@ -1326,6 +1348,42 @@ peds_thread = util.create_thread(function (thr)
                     end
                 end
                 if not PED.IS_PED_A_PLAYER(ped) then
+                    if ped_no_ragdoll then 
+                        PED.SET_PED_CAN_RAGDOLL(ped, false)
+                    end
+
+                    if ped_godmode then 
+                        ENTITY.SET_ENTITY_INVINCIBLE(ped, true)
+                    end
+
+
+                    if ped_no_crits then
+                        PED.SET_PED_SUFFERS_CRITICAL_HITS(ped, false)
+                    end
+
+                    if ped_highperception then
+                        PED.SET_PED_HIGHLY_PERCEPTIVE(ped, true)
+                        PED.SET_PED_HEARING_RANGE(ped, 1000.0)
+                        PED.SET_PED_SEEING_RANGE(ped, 1000.0)
+                        PED.SET_PED_VISUAL_FIELD_MIN_ANGLE(ped, 1000.0)
+                    end
+
+                    if ped_allcops then
+                        PED.SET_PED_AS_COP(ped, true)
+                    end
+
+                    if ped_theflash then
+                        PED.SET_PED_MOVE_RATE_OVERRIDE(ped, 10.0)
+                    end
+
+                    if ped_hardened then
+                        PED.SET_PED_COMBAT_ATTRIBUTES(ped, 5, true)
+                        PED.SET_PED_FLEE_ATTRIBUTES(ped, 0, false)
+                        PED.SET_PED_COMBAT_ATTRIBUTES(ped, 46, true)
+                        PED.SET_PED_ACCURACY(ped, 100)
+                        PED.SET_PED_COMBAT_ABILITY(ped, 3)
+                    end
+
                     if peds_ignore then
                         if not PED.GET_PED_CONFIG_FLAG(ped, 17, true) then
                             PED.SET_BLOCKING_OF_NON_TEMPORARY_EVENTS(ped, true)
@@ -1406,6 +1464,7 @@ end)
 
 -- PEDS
 ped_b_root = menu.list(peds_root, "Behavior", {"lancescriptpedbehavior"}, "Pedestrian-related behavior fuckery")
+ped_attributes_root = menu.list(peds_root, "Attributes", {"lancescriptpedattributes"}, "Modify certain attributes of peds")
 ped_voice = menu.list(peds_root, "Voice", {"lancescriptpedaudio"}, "Pedestrian-related voice fuckery")
 ped_spawn = menu.list(peds_root, "Spawn", {"lancescriptpedspawn"}, "Pedestrian-related spawning fuckery")
 
@@ -1520,14 +1579,61 @@ function task_handler(type)
                     break
                 case "Cower":
                     TASK.TASK_COWER(ped, -1)
-                    break 
+                    break
+                case "Clear":
+                    TASK.CLEAR_PED_TASKS(ped)
+                    break
             end
         end
     end
 end
 
+ped_no_ragdoll = false
+menu.toggle(ped_attributes_root, "No ragdoll", {"nopedragdoll"}, "", function(on)
+    ped_no_ragdoll = on 
+    mod_uses("ped", if on then 1 else -1)
+end)
+
+ped_godmode = false
+menu.toggle(ped_attributes_root, "Godmode", {"pedgodmode"}, "", function(on)
+    ped_godmode = on 
+    mod_uses("ped", if on then 1 else -1)
+end)
+
+ped_no_crits = false
+menu.toggle(ped_attributes_root, "No crits", {"nopedcrits"}, "", function(on)
+    ped_no_crits = on 
+    mod_uses("ped", if on then 1 else -1)
+end)
+
+ped_highperception = false
+menu.toggle(ped_attributes_root, "High perception", {"pedhighperception"}, "Peds will see and hear a lot more than they usually would.", function(on)
+    ped_highperception = on 
+    mod_uses("ped", if on then 1 else -1)
+end)
+
+ped_allcops = false
+menu.toggle(ped_attributes_root, "Make all peds cops", {"pedallcops"}, "", function(on)
+    ped_allcops = on 
+    mod_uses("ped", if on then 1 else -1)
+end)
+
+ped_theflash = false
+menu.toggle(ped_attributes_root, "Looney Tunes", {"pedlooneytunes"}, "Peds move SUPER fast, especially when sprinting. Scare them to really showcase this feature.", function(on)
+    ped_theflash = on 
+    mod_uses("ped", if on then 1 else -1)
+end)
+
+ped_hardened = false
+menu.toggle(ped_attributes_root, "Hardened", {"pedhardened"}, "Peds are no longer cowards and will fight rather than flight. They are also a lot more accurate and combat-capable.", function(on)
+    ped_hardened = on 
+    mod_uses("ped", if on then 1 else -1)
+end)
+
+
+
 local task_dict = {"flop", "cover", "vault"}
-local task_options = {"Flop", "Cover", "Vault", "Cower", "Writhe"}
+local task_options = {"Flop", "Cover", "Vault", "Cower", "Writhe", "Clear"}
 menu.list_action(peds_root, "Task all", {"taskped"}, "", task_options, function(index, value, click_type)
     task_handler(value)
 end)
@@ -1593,6 +1699,46 @@ v_phys_root = menu.list(vehicles_root, "Vehicle physics", {"lancescriptvphysics"
 vc_root = menu.list(v_phys_root, "Vehicle chaos", {"lancescriptchaos"}, "The day of reckoning")
 v_traffic_root = menu.list(vehicles_root, "Vehicle traffic", {"lancescripttraffic"}, "Control vehicle traffic")
 
+function get_closest_vehicle(entity)
+    local coords = ENTITY.GET_ENTITY_COORDS(entity, true)
+    local vehicles = entities.get_all_vehicles_as_handles()
+    -- init this at some ridiculously large number we will never reach, ez
+    local closestdist = 1000000
+    local closestveh = 0
+    for k, veh in pairs(vehicles) do
+        if veh ~= PED.GET_VEHICLE_PED_IS_IN(PLAYER.PLAYER_PED_ID(), false) then
+            local vehcoord = ENTITY.GET_ENTITY_COORDS(veh, true)
+            local dist = MISC.GET_DISTANCE_BETWEEN_COORDS(coords['x'], coords['y'], coords['z'], vehcoord['x'], vehcoord['y'], vehcoord['z'], true)
+            if dist < closestdist then
+                closestdist = dist
+                closestveh = veh
+            end
+        end
+    end
+    return closestveh
+end
+
+menu.action(vehicles_root, "Teleport into closest vehicle", {"closestvehicle"}, "Teleports into closest vehicle (excludes any you might be in already). If the closest vehicle has a player driver, it will put you in the next available seat, if any. Keep in mind that nearby vehicles may not actually be \"real\" vehicles and may just be LOD\'s.", function(on_click)
+    local closestveh = get_closest_vehicle(players.user_ped())
+    local driver = VEHICLE.GET_PED_IN_VEHICLE_SEAT(closestveh, -1)
+    if VEHICLE.IS_VEHICLE_SEAT_FREE(closestveh, -1) then
+        PED.SET_PED_INTO_VEHICLE(players.user_ped(), closestveh, -1)
+    else
+        if not PED.IS_PED_A_PLAYER(driver) then
+            entities.delete(driver)
+            PED.SET_PED_INTO_VEHICLE(players.user_ped(), closestveh, -1)
+        elseif VEHICLE.ARE_ANY_VEHICLE_SEATS_FREE(closestveh) then
+            for i=0, 10 do
+                if VEHICLE.IS_VEHICLE_SEAT_FREE(closestveh, i) then
+                    PED.SET_PED_INTO_VEHICLE(players.user_ped(), closestveh, i)
+                end
+            end
+        else
+            util.toast("No nearby vehicles with available seats found :(")
+        end
+    end
+end)
+
 vehicle_chaos = false
 menu.toggle(vc_root, "Vehicle chaos", {"chaos"}, "Enables the chaos...", function(on)
     vehicle_chaos = on
@@ -1623,6 +1769,12 @@ menu.toggle(v_phys_root, "Ascend all nearby vehicles", {"ascendvehicles"}, "It\'
     ascend_vehicles = on
     mod_uses("vehicle", if on then 1 else -1)
 end)
+
+inferno = false
+menu.toggle(v_phys_root, "Inferno", {"inferno"}, "An overdramatic \"blow up all cars\" option. Will continue to blow up all cars even when they\'re dead, just so you get that classic modder feel.", function(on)
+    inferno = on
+    mod_uses("vehicle", if on then 1 else -1)
+end, false)
 
 blackhole = false
 menu.toggle(v_phys_root, "Vehicle blackhole", {"blackhole"}, "A SUPER laggy but fun blackhole. When you toggle it on, it will set the blackhole position above you. Retoggle it to change the position. Oh also, this is very resource taxing and may temporarily fuck up collisions.", function(on)
@@ -1703,6 +1855,11 @@ vehicles_thread = util.create_thread(function (thr)
                             request_control_of_entity(veh)
                         end
                     end
+                    if inferno then
+                        local coords = ENTITY.GET_ENTITY_COORDS(veh, true)
+                        FIRE.ADD_EXPLOSION(coords['x'], coords['y'], coords['z'], 7, 100.0, true, false, 1.0)
+                    end
+
                     if beep_cars then
                         if not AUDIO.IS_HORN_ACTIVE(veh) then
                             VEHICLE.START_VEHICLE_HORN(veh, 200, util.joaat("HELDDOWN"), true)
@@ -2154,7 +2311,7 @@ end)
 function get_best_mug_target()
     local most = 0
     local mostp = 0
-    for k,p in pairs(players.list(false, true, true)) do
+    for k,p in pairs(players.list(true, true, true)) do
         cur_wallet = players.get_wallet(p)
         if cur_wallet > most then
             most = cur_wallet
@@ -2176,7 +2333,7 @@ end
 function get_poorest_player()
     local least = 10000000000000000
     local leastp = 0
-    for k,p in pairs(players.list(false, true, true)) do
+    for k,p in pairs(players.list(true, true, true)) do
         cur_assets = players.get_wallet(p) + players.get_bank(p)
         if cur_assets < least then
             least = cur_assets
@@ -2217,9 +2374,38 @@ function get_richest_player()
     end
 end
 
+function get_horniest_player()
+    local highest_horniness = 0
+    local horniest = 0
+    local most_lapdances = 0
+    local most_prostitutes = 0
+    for k,p in pairs(players.list(true, true, true)) do
+        lapdances = get_lapdances_amount(p)
+        prostitutes = get_prostitutes_solicited(p)
+        horniness = lapdances + prostitutes
+        if horniness > highest_horniness then
+            highest_horniness = horniness
+            horniest = p
+            most_lapdances = lapdances
+            most_prostitutes = prostitutes
+        end
+    end
+    if horniness == nil then
+        util.toast("You are alone. Cannot find horniest player.")
+        return
+    end
+    if highest_horniness ~= 0 then
+        return PLAYER.GET_PLAYER_NAME(horniest) .. " is the horniest player in the session! Their character has solicited " .. most_prostitutes .. " hookers, and paid for " .. most_lapdances .. " lap dances!"
+    else
+        util.toast("Could not find horniest player.")
+        return nil
+    end
+end
+
+
 
 function max_out_car(veh)
-    for i=0, 49 do
+    for i=0, 47 do
         num = VEHICLE.GET_NUM_VEHICLE_MODS(veh, i)
         VEHICLE.SET_VEHICLE_MOD(veh, i, num -1, true)
     end
@@ -2337,6 +2523,154 @@ function tp_all_player_cars_to_coords(coord)
     end
 end
 
+function dispatch_griefer_jesus(target)
+    ls_log("Dispatched griefer jesus.")
+    griefer_jesus = util.create_thread(function(thr)
+        util.toast("Griefer jesus sent!")
+        request_model_load(-835930287)
+        local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(target)
+        coords = ENTITY.GET_ENTITY_COORDS(target_ped, false)
+        coords.x = coords['x']
+        coords.y = coords['y']
+        coords.z = coords['z']
+        local jesus = entities.create_ped(1, -835930287, coords, 90.0)
+        ENTITY.SET_ENTITY_INVINCIBLE(jesus, true)
+        PED.SET_PED_HEARING_RANGE(jesus, 9999)
+	    PED.SET_PED_CONFIG_FLAG(jesus, 281, true)
+        PED.SET_PED_COMBAT_ATTRIBUTES(jesus, 5, true)
+	    PED.SET_PED_COMBAT_ATTRIBUTES(jesus, 46, true)
+        PED.SET_PED_CAN_RAGDOLL(jesus, false)
+        WEAPON.GIVE_WEAPON_TO_PED(jesus, util.joaat("WEAPON_RAILGUN"), 9999, true, true)
+        TASK.TASK_GO_TO_ENTITY(jesus, target_ped, -1, -1, 100.0, 0.0, 0)
+    	TASK.TASK_COMBAT_PED(jesus, target_ped, 0, 16)
+        PED.SET_PED_ACCURACY(jesus, 100.0)
+        PED.SET_PED_COMBAT_ABILITY(jesus, 2)
+        --pretty much just a respawn/rationale check
+        while true do
+            local player_coords = ENTITY.GET_ENTITY_COORDS(target_ped, false)
+            local jesus_coords = ENTITY.GET_ENTITY_COORDS(jesus, false)
+            local dist =  MISC.GET_DISTANCE_BETWEEN_COORDS(player_coords['x'], player_coords['y'], player_coords['z'], jesus_coords['x'], jesus_coords['y'], jesus_coords['z'], false)
+            if dist > 100 then
+                local behind = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(target_ped, -3.0, 0.0, 0.0)
+                ENTITY.SET_ENTITY_COORDS(jesus, behind['x'], behind['y'], behind['z'], false, false, false, false)
+            end
+            -- if jesus disappears we can just make another lmao
+            if not ENTITY.DOES_ENTITY_EXIST(jesus) then
+                util.toast("Jesus apparently stopped existing. Stopping Jesus thread.")
+                util.stop_thread()
+            end
+            local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(target)
+            if not players.exists(target) then
+                util.toast("The player target has been lost. The griefer Jesus thread is stopping.")
+                util.stop_thread()
+            else
+                TASK.TASK_COMBAT_PED(jesus, target_ped, 0, 16)
+            end
+            util.yield(100)
+        end
+    end)
+end
+
+function dispatch_angry_firefighter(target)
+    ls_log("Dispatched angry firefighter.")
+    angry_firefighter = util.create_thread(function(thr)
+        local p_hash = util.joaat('s_m_y_fireman_01')
+        local v_hash = util.joaat("firetruk")
+        local player_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(target)
+        request_model_load(p_hash)
+        request_model_load(v_hash)
+        local coords = ENTITY.GET_ENTITY_COORDS(player_ped, true)
+        local spawn_pos = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(player_ped, 0.0, -10.0, 0.0)
+        local vehicle = entities.create_vehicle(v_hash, spawn_pos, ENTITY.GET_ENTITY_HEADING(player_ped))
+        VEHICLE.SET_VEHICLE_SIREN(vehicle, true)
+        local blip = HUD.ADD_BLIP_FOR_ENTITY(vehicle)
+        HUD.SET_BLIP_COLOUR(blip, 61)
+        ENTITY.SET_ENTITY_INVINCIBLE(vehicle, true)
+        ENTITY.SET_ENTITY_INVINCIBLE(ped, true)
+        local ped = entities.create_ped(1, p_hash, spawn_pos, 0.0)
+        PED.SET_PED_INTO_VEHICLE(ped, vehicle, -1)
+        PED.SET_PED_FLEE_ATTRIBUTES(ped, 0, false)
+        PED.SET_PED_COMBAT_ATTRIBUTES(ped, 5, true)
+        PED.SET_PED_COMBAT_ATTRIBUTES(ped, 46, true)
+        TASK.TASK_VEHICLE_SHOOT_AT_PED(ped, player_ped, 1000.0)
+        VEHICLE._SET_VEHICLE_DOORS_LOCKED_FOR_UNK(vehicle, true)
+        VEHICLE.SET_VEHICLE_DOORS_LOCKED(vehicle, true)
+        --pretty much just a respawn/rationale check
+        while true do
+            if not ENTITY.IS_ENTITY_UPRIGHT(vehicle, 30) then
+                ENTITY.SET_ENTITY_ROTATION(vehicle, 0, 0, 0, 0) 
+            end
+            local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(target)
+            local player_coords = ENTITY.GET_ENTITY_COORDS(target_ped, false)
+            local ped_coords = ENTITY.GET_ENTITY_COORDS(ped, false)
+            TASK.TASK_VEHICLE_SHOOT_AT_PED(ped, target_ped, 1000.0)
+            PED.SET_PED_KEEP_TASK(ped, true)
+            local dist =  MISC.GET_DISTANCE_BETWEEN_COORDS(player_coords['x'], player_coords['y'], player_coords['z'], ped_coords['x'], ped_coords['y'], ped_coords['z'], false)
+            if dist > 50 then
+                local behind = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(target_ped, -15.0, 0.0, 0.0)
+                ENTITY.SET_ENTITY_COORDS(vehicle, behind['x'], behind['y'], behind['z'], false, false, false, false)
+                TASK.TASK_VEHICLE_SHOOT_AT_PED(ped, target_ped, 1000.0)
+                PED.SET_PED_KEEP_TASK(ped, true)
+            end
+            -- if jesus disappears we can just make another lmao
+            if not ENTITY.DOES_ENTITY_EXIST(ped) then
+                util.stop_thread()
+            end
+            if not players.exists(target) then
+                util.stop_thread()
+            end
+            util.yield(100)
+        end
+    end)
+end
+
+function dispatch_mariachi(target)
+    mariachi_thr = util.create_thread(function()
+        local men = {}
+        local player_ped
+        local pos_offsets = {-1.0, 0.0, 1.0}
+        local p_hash = -927261102
+        local pos
+        request_model_load(p_hash)
+        player_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(target)
+        for i=1, 3 do
+            local spawn_pos = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(player_ped, pos_offsets[i], -1.0, 0.0)
+            local ped = entities.create_ped(1, p_hash, spawn_pos, 0.0)
+            local flag = entities.create_object(util.joaat("prop_flag_mexico"), spawn_pos, 0)
+            ENTITY.ATTACH_ENTITY_TO_ENTITY(flag, ped, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, true, true, false, true, 1, true)
+            ENTITY.SET_ENTITY_COMPLETELY_DISABLE_COLLISION(ped, true, false)
+            local dict = "amb@world_human_musician@guitar@male@idle_a"
+            while not STREAMING.HAS_ANIM_DICT_LOADED(dict) do
+                STREAMING.REQUEST_ANIM_DICT(dict)
+                util.yield()
+            end
+            --local g_hash = util.joaat('prop_acc_guitar_01')
+            --local guitar = entities.create_object(g_hash, spawn_pos, 0)
+            --ENTITY.ATTACH_ENTITY_TO_ENTITY(guitar, ped, PED.GET_PED_BONE_INDEX(ped, 24818), -0.05, 0.31, 0.1, 0.0, 20.0, 150.0, true, true, false, true, 1, true)
+            --TASK.TASK_PLAY_ANIM(ped, dict, "idle_b", 1.0, 1.0, -1, 3, 0.5, false, false, false)
+            TASK.TASK_START_SCENARIO_IN_PLACE(ped, "WORLD_HUMAN_MUSICIAN", 0, false)
+            PED.SET_BLOCKING_OF_NON_TEMPORARY_EVENTS(ped, true)
+            PED.SET_PED_FLEE_ATTRIBUTES(ped, 0, false)
+            PED.SET_PED_CAN_RAGDOLL(ped, false)
+            ENTITY.SET_ENTITY_INVINCIBLE(ped, true)
+            men[#men + 1] = ped
+        end
+
+        while true do
+            player_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(target)
+            for k,ped in pairs(men) do
+                pos = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(player_ped, pos_offsets[k], 1.0, -1.0)
+                ENTITY.SET_ENTITY_COORDS(ped, pos.x, pos.y, pos.z)
+                ENTITY.SET_ENTITY_HEADING(ped, ENTITY.GET_ENTITY_HEADING(player_ped)+180)
+                if not PED.IS_PED_USING_ANY_SCENARIO(ped) then
+                    TASK.TASK_START_SCENARIO_IN_PLACE(ped, "WORLD_HUMAN_MUSICIAN", 0, false)
+                end
+            end
+            util.yield()
+        end
+    end)
+end
+
 givegun = false
 function send_attacker(hash, pid, givegun, num_attackers, atkgun)
     local this_attacker
@@ -2421,6 +2755,7 @@ function send_groundv_attacker(vhash, phash, pid, givegun, num_attackers, atkgun
         spawn_pos.y = spawn_pos['y']
         spawn_pos.z = spawn_pos['z']
         local bike = entities.create_vehicle(vhash, spawn_pos, ENTITY.GET_ENTITY_HEADING(player_ped))
+        VEHICLE.SET_VEHICLE_ENGINE_ON(bike, true, true, false)
         for i=-1, VEHICLE.GET_VEHICLE_MODEL_NUMBER_OF_SEATS(vhash) - 2 do
             local rider = entities.create_ped(1, phash, spawn_pos, 0.0)
             local blip = HUD.ADD_BLIP_FOR_ENTITY(rider)
@@ -2441,6 +2776,51 @@ function send_groundv_attacker(vhash, phash, pid, givegun, num_attackers, atkgun
             if atkgun ~= 0 then
                 WEAPON.GIVE_WEAPON_TO_PED(rider, atkgun, 1000, false, true)
             end
+        end
+    end
+end
+
+function send_attacker_squad(p_hash, v_hash, forcestayinv, godmodeatk, hp, weapon, pid)
+    local player_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
+    request_model_load(p_hash)
+    request_model_load(v_hash)
+    local coords = ENTITY.GET_ENTITY_COORDS(player_ped, true)
+    local spawn_pos = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(player_ped, 0.0, -10.0, 0.0)
+    local vehicle = entities.create_vehicle(v_hash, spawn_pos, ENTITY.GET_ENTITY_HEADING(player_ped)) 
+    VEHICLE.SET_VEHICLE_ENGINE_ON(vehicle, true, true, false)
+    max_out_car(vehicle)
+    local blip = HUD.ADD_BLIP_FOR_ENTITY(vehicle)
+    HUD.SET_BLIP_COLOUR(blip, 61)
+    if godmodeatk then
+        ENTITY.SET_ENTITY_INVINCIBLE(vehicle, true)
+    end
+
+    for i=-1, VEHICLE.GET_VEHICLE_MAX_NUMBER_OF_PASSENGERS(vehicle) - 1 do
+        local ped = entities.create_ped(1, p_hash, spawn_pos, 0.0)
+        PED.SET_PED_INTO_VEHICLE(ped, vehicle, i)
+        if weapon ~= 0 then
+            WEAPON.GIVE_WEAPON_TO_PED(ped, weapon, 1000, false, true)
+        end
+        ENTITY.SET_ENTITY_HEALTH(ped, hp)
+
+        if hp > 100.0 then
+            PED.SET_PED_SUFFERS_CRITICAL_HITS(ped, false)
+            PED.SET_PED_CAN_RAGDOLL(ped, false)
+        end
+        PED.SET_PED_COMBAT_ATTRIBUTES(ped, 5, true)
+        PED.SET_PED_COMBAT_ATTRIBUTES(ped, 46, true)
+        if i == -1 then
+            TASK.TASK_VEHICLE_CHASE(ped, player_ped)
+        end
+        TASK.TASK_COMBAT_PED(rider, player_ped, 0, 16)
+
+        if godmodeatk then
+            ENTITY.SET_ENTITY_INVINCIBLE(ped, true)
+        end
+
+        if forcestayinv then
+            VEHICLE._SET_VEHICLE_DOORS_LOCKED_FOR_UNK(vehicle, true)
+            VEHICLE.SET_VEHICLE_DOORS_LOCKED(vehicle, true)
         end
     end
 end
@@ -2467,12 +2847,14 @@ function set_up_player_actions(pid)
     local ls_hostile = menu.list(menu.player_root(pid), "Lancescript: Hostile", {"lshostile"}, "")
     --local scriptevents = menu.list(ls_hostile, "Script events", {"lsse"}, "Send script events to the player to do various things")
     local ls_neutral = menu.list(menu.player_root(pid), "Lancescript: Neutral", {"lsneutral"}, "")
-    spawnvehicle_root = menu.list(ls_friendly, "Give vehicle", {"spawnveh"}, "")
-    explosions_root = menu.list(ls_hostile, "Projectiles/explosions", {"lancescriptexplosions"}, "Fire jet, water jet, launch player, etc.")
-    playerveh_root = menu.list(ls_hostile, "Vehicle", {"playerv"}, "Vehicle actions with varying degrees of success depending on numerous factors.")
-    npctrolls_root = menu.list(ls_hostile, "NPC trolling", {"npctrolls"}, "")
-    attackers_root = menu.list(npctrolls_root, "Attackers", {"lancescriptattackers"}, "Send attackers")
-    chattrolls_root = menu.list(ls_hostile, "Chat trolling", {"chattrolls"}, "")
+    local spawnvehicle_root = menu.list(ls_friendly, "Give vehicle", {"spawnveh"}, "")
+    local explosions_root = menu.list(ls_hostile, "Projectiles/explosions", {"lancescriptexplosions"}, "Fire jet, water jet, launch player, etc.")
+    local playerveh_root = menu.list(ls_hostile, "Vehicle", {"playerv"}, "Vehicle actions with varying degrees of success depending on numerous factors.")
+    local npctrolls_root = menu.list(ls_hostile, "NPC trolling", {"npctrolls"}, "")
+    local attackers_root = menu.list(npctrolls_root, "Attackers", {"lancescriptattackers"}, "Send attackers")
+    local chattrolls_root = menu.list(ls_hostile, "Chat trolling", {"chattrolls"}, "")
+    local pstats_root = menu.list(ls_hostile, "Stats", {"pstats"}, "")
+
     ram_root = menu.list(ls_hostile, "Ram", {"ram"}, "")
 
     local tp_options = {"To me", "To waypoint", "Maze Bank", "Underwater", "High up", "LSC", "SCP-173", "Large cell", "Underwater, and apply child lock"}
@@ -2846,17 +3228,21 @@ function set_up_player_actions(pid)
         local owner = players.user_ped()
         p_type = p_types[index]
         WEAPON.REQUEST_WEAPON_ASSET(p_type)
-        MISC.SHOOT_SINGLE_BULLET_BETWEEN_COORDS(target['x'], target['y'], target['z']-0.5, target['x'], target['y'], target['z']-0.4, 100, true, p_type, owner, true, false, 4000.0)
+        MISC.SHOOT_SINGLE_BULLET_BETWEEN_COORDS(target['x'], target['y'], target['z']+0.5, target['x'], target['y'], target['z']+0.6, 100, true, p_type, owner, true, false, 4000.0)
     end)
 
     menu.toggle_loop(explosions_root, "Projectile loop", {"projectileloop"}, "", function(on)
         local target_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
         local target = ENTITY.GET_ENTITY_COORDS(target_ped, false)
         local owner = players.user_ped()
-        MISC.SHOOT_SINGLE_BULLET_BETWEEN_COORDS(target['x'], target['y'], target['z']-0.5, target['x'], target['y'], target['z']-0.4, 100, true, p_type, owner, true, false, 4000.0)
+        MISC.SHOOT_SINGLE_BULLET_BETWEEN_COORDS(target['x'], target['y'], target['z']+0.5, target['x'], target['y'], target['z']+0.6, 100, true, p_type, owner, true, false, 4000.0)
     end)
 
     menu.toggle(ls_neutral, "Attach to player", {"attachto"}, "Useful, because if you\'re near the player your trolling works better", function(on)
+        if PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid) == players.user_ped() then 
+            util.toast("Nope! Saved you from a crash :)")
+            return
+        end
         if on then
             ENTITY.ATTACH_ENTITY_TO_ENTITY(players.user_ped(), PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid), 0, 0.0, -0.20, 2.00, 1.0, 1.0,1, true, true, true, false, 0, true)
         else
@@ -2950,9 +3336,32 @@ function set_up_player_actions(pid)
     end)
 
     local attacker_hashes = {1459905209, -287649847, 1264920838, -927261102, 1302784073, -1788665315, 307287994, util.joaat('csb_stripper_02'), util.joaat("CS_BradCadaver")}
-    local atk_options = {"Jack Harlow", "Niko", "Chad", "Mani", "Lester", "Dog", "Mountain lion", "Stripper", "Brad", "Jets", "A-10s", "Cargo planes", "Bri-ish", "Clown", "Motorcycle gang", "Helicopter", "Custom", "Custom aircraft", "Custom car", "Clone player"}
-    menu.list_action(attackers_root, "Send attacker", {"sendattacker"}, "", atk_options, function(index, value, click_type)
+    local atk_options = {"Jack Harlow", "Niko", "Chad", "Mani", "Lester", "Dog", "Mountain lion", "Stripper", "Brad", "Custom", "Custom aircraft", "Custom car", "Clone player"}
+    menu.list_action(attackers_root, "Send normal attacker", {"sendattacker"}, "", atk_options, function(index, value, click_type)
             pluto_switch value do
+                case "Custom":
+                    send_attacker(util.joaat(atk_ped), pid, false, num_attackers, atkgun)
+                    break
+                case "Custom aircraft": 
+                    send_aircraft_attacker(util.joaat(atk_aircraft), -163714847, pid, num_attackers)
+                    break
+                case "Custom car":
+                    send_groundv_attacker(util.joaat(atk_car), 850468060, pid, true, num_attackers, atkgun)
+                    break
+                case "Clone player": 
+                    send_attacker("CLONE", pid, false, num_attackers)
+                    break
+                pluto_default:
+                    send_attacker(attacker_hashes[index], pid, false, num_attackers, atkgun)
+            end
+    end)
+
+    local specialatk_options = {"Angry firefighter", "Griefer Jesus","Jets", "A-10s", "Cargo planes", "Bri-ish", "Clown", "SWAT assault", "Juggernaut onslaught", "Motorcycle gang", "Helicopter"}
+    menu.list_action(attackers_root, "Send special attacker", {"sendspecialattacker"}, "", specialatk_options, function(index, value, click_type)
+            pluto_switch value do
+                case "Griefer Jesus": 
+                    dispatch_griefer_jesus(pid)
+                    break
                 case "Custom":
                     send_attacker(util.joaat(atk_ped), pid, false, num_attackers, atkgun)
                     break
@@ -2974,43 +3383,20 @@ function set_up_player_actions(pid)
                 case "Cargo planes":
                     send_aircraft_attacker(util.joaat("cargoplane"), -163714847, pid, num_attackers)
                     break
-                case "Helicopter": 
+                case "Helicopter":
                     send_aircraft_attacker(1543134283, util.joaat("mp_m_bogdangoon"), pid, num_attackers)
                     break
                 case "Clown": 
-                    local player_ped = PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid)
-                    local clown_hash = 71929310
-                    request_model_load(clown_hash)
-                    local van_hash = util.joaat("speedo2")
-                    request_model_load(van_hash)
-                    local coords = ENTITY.GET_ENTITY_COORDS(player_ped, true)
-                    local spawn_pos = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(player_ped, 0.0, -10.0, 0.0)
-                    spawn_pos.x = spawn_pos['x']
-                    spawn_pos.y = spawn_pos['y']
-                    spawn_pos.z = spawn_pos['z']
-                    local van = entities.create_vehicle(van_hash, spawn_pos, ENTITY.GET_ENTITY_HEADING(player_ped))
-                    if godmodeatk then
-                        ENTITY.SET_ENTITY_INVINCIBLE(van, true)
-                    end
-                    for i=-1, VEHICLE.GET_VEHICLE_MAX_NUMBER_OF_PASSENGERS(van) - 1 do
-                        local clown = entities.create_ped(1, clown_hash, spawn_pos, 0.0)
-                        PED.SET_PED_INTO_VEHICLE(clown, van, i)
-                        if i % 2 == 0 then
-                            WEAPON.GIVE_WEAPON_TO_PED(clown, -1810795771, 1000, false, true)
-                        else
-                            WEAPON.GIVE_WEAPON_TO_PED(clown, 584646201, 1000, false, true)
-                        end
-                        PED.SET_PED_COMBAT_ATTRIBUTES(clown, 5, true)
-                        PED.SET_PED_COMBAT_ATTRIBUTES(clown, 46, true)
-                        if i == -1 then
-                            TASK.TASK_VEHICLE_CHASE(clown, player_ped)
-                        else
-                            TASK.TASK_COMBAT_PED(clown, player_ped, 0, 16)
-                        end
-                        if godmodeatk then
-                            ENTITY.SET_ENTITY_INVINCIBLE(clown, true)
-                        end
-                    end
+                    send_attacker_squad(71929310, util.joaat("speedo2"), false, godmodeatk, 100.0, -1810795771, pid)
+                    break
+                case "Juggernaut onslaught":
+                    send_attacker_squad(util.joaat("u_m_y_juggernaut_01"), util.joaat("barracks3"), false, godmodeatk, 4000.0, 1119849093, pid)
+                    break
+                case "Angry firefighter": 
+                    dispatch_angry_firefighter(pid)
+                    break
+                case "SWAT assault": 
+                    send_attacker_squad(util.joaat('s_m_y_swat_01'), util.joaat("policet"), false, godmodeatk, 100.0, 2144741730, pid)
                     break
                 case "Motorcycle gang": 
                     send_groundv_attacker(-159126838, 850468060, pid, true, num_attackers, atkgun)
@@ -3116,6 +3502,10 @@ function set_up_player_actions(pid)
         ENTITY.SET_ENTITY_ROTATION(cage1, 0.0, -90.0, 0.0, 1, true)
         local cage2 = OBJECT.CREATE_OBJECT_NO_OFFSET(hash, coords['x'], coords['y'], coords['z'], true, false, false)
         ENTITY.SET_ENTITY_ROTATION(cage2, 0.0, 90.0, 0.0, 1, true)
+    end)
+
+    menu.action(npctrolls_root, "Summon mariachi band", {"mariachiband"}, "", function(click_type)
+        dispatch_mariachi(pid)
     end)
 
     menu.action(ls_hostile, "Cargo plane trap", {"cargoplanetrap"}, "Traps the player in a cargo plane.", function(click_type)
@@ -3272,6 +3662,21 @@ function set_up_player_actions(pid)
             util.toast("Player is not in a car :(")
         end
     end)
+
+    -- these actions should only run when the user is fully loaded in, i.e for memory stuff
+        while util.is_session_transition_active() or not NETWORK.NETWORK_IS_PLAYER_ACTIVE(pid) do
+            util.yield()
+        end
+        if pstats_root ~= nil then
+            -- thanks vsus
+            menu.action(pstats_root, "Lap dances received: " .. tostring(get_lapdances_amount(pid)), {"lapdancestat"}, "Press on this to shame them to the session.", function(click_type)
+                chat.send_message(PLAYER.GET_PLAYER_NAME(pid) .. " has purchased " .. tostring(get_lapdances_amount(pid)) .. " lap dances in total!", false, true, true)
+            end)
+
+            menu.action(pstats_root, "Hookers bought: " .. tostring(get_prostitutes_solicited(pid)), {"hookerstat"}, "Press on this to shame them to the session.", function(click_type)
+                chat.send_message(PLAYER.GET_PLAYER_NAME(pid) .. " has solicited " .. tostring(get_prostitutes_solicited(pid)) .. " hookers in total!", false, true, true)
+            end)
+        end
 end
 
 broke_blips = {}
@@ -3370,27 +3775,25 @@ menu.action(ap_root, "Toast best mug target", {"best mug"}, "Toasts you the play
 end)
 
 
-local announce_options = {'Best mug target', 'Poorest player', 'Richest player'}
+local announce_options = {'Best mug target', 'Poorest player', 'Richest player', 'Horniest player'}
 menu.list_action(ap_root, "Announce", {"announcestat"}, "", announce_options, function(index, value, click_type)
+    local ret = nil
     pluto_switch index do 
         case 1: 
-            local ret = get_best_mug_target()
-            if ret ~= nil then
-                chat.send_message(ret, false, true, true)
-            end
+            ret = get_best_mug_target()
             break
         case 2: 
-            local ret = get_poorest_player()
-            if ret ~= nil then
-                chat.send_message(ret, false, true, true)
-            end
+            ret = get_poorest_player()
             break
         case 3:
-            local ret = get_richest_player()
-            if ret ~= nil then
-                chat.send_message(ret, false, true, true)
-            end
+            ret = get_richest_player()
             break
+        case 4:
+            ret = get_horniest_player()
+            break
+    end
+    if ret ~= nil then
+        chat.send_message(ret, false, true, true)
     end
 end)
 
@@ -3467,7 +3870,7 @@ menu.list_action(apgiveveh_root, "Give vehicle", {"givepveh"}, "", vehicle_names
 end)
 
 show_voicechatters = false
-menu.toggle(online_root, "Show me who\'s using voicechat", {"showvoicechat"}, "Shows who is actually using GTA:O voice chat, in 2021. Which is likely to be nobody. So this is a bitch to test. but.", function(on)
+menu.toggle(online_root, "Show me who\'s using voicechat", {"showvoicechat"}, "This may or may not work depending on how fucked the session is.", function(on)
     show_voicechatters = on
     mod_uses("player", if on then 1 else -1)
 end)
@@ -3646,8 +4049,10 @@ end)
 -- CREDITS
 lancescript_credits = menu.list(lancescript_root, "Credits", {"lancescriptcredits"}, "")
 menu.action(lancescript_credits, "Sainan", {}, "Donating $200 worth of crypto (top donor), helping with reverse engineering GTA V, developing Stand that makes Lancescript possible, and generally being a big help. Thanks for everything.", function(click_type) end)
-menu.action(lancescript_credits, "61k", {}, "Donating $20 worth of Litecoin. Thank you for your support.", function(click_type) end)
+--PANDA#4444
+menu.action(lancescript_credits, "PANDA#4444", {}, "Donating a $25 Amazon gift card, thank you!", function(click_type) end)
 menu.action(lancescript_credits, "Millennium#0001", {}, "Sending a $10 fortnit- i mean amazon- gift card. Thanks!", function(click_type) end)
+menu.action(lancescript_credits, "61k", {}, "Donating $20 worth of Litecoin. Thank you for your support.", function(click_type) end)
 menu.action(lancescript_credits, "Y1tzy", {}, "One of the original donors. Thanks!", function(click_type) end)
 menu.action(lancescript_credits, "Lancito01", {}, "Donating to me :)", function(click_type) end)
 menu.action(lancescript_credits, "YoYo", {}, "Donating to my PayPal. Thanks for your support! :)", function(click_type) end)
