@@ -4,7 +4,7 @@ util.require_natives("1640181023")
 gta_labels = require('all_labels')
 all_labels = gta_labels.all_labels
 sexts = gta_labels.sexts
-coded_for_gtao_version = 1.60
+coded_for_gtao_version = 1.61
 is_loading = true
 ls_debug = false
 all_vehicles = {}
@@ -4049,7 +4049,7 @@ end)
 -- CREDITS
 lancescript_credits = menu.list(lancescript_root, "Credits", {"lancescriptcredits"}, "")
 menu.action(lancescript_credits, "Sainan", {}, "Donating $200 worth of crypto (top donor), helping with reverse engineering GTA V, developing Stand that makes Lancescript possible, and generally being a big help. Thanks for everything.", function(click_type) end)
---PANDA#4444
+menu.action(lancescript_credits, "Catnip#0420", {}, "Donating a $50 Amazon gift card, thank you!", function(click_type) end)
 menu.action(lancescript_credits, "PANDA#4444", {}, "Donating a $25 Amazon gift card, thank you!", function(click_type) end)
 menu.action(lancescript_credits, "Millennium#0001", {}, "Sending a $10 fortnit- i mean amazon- gift card. Thanks!", function(click_type) end)
 menu.action(lancescript_credits, "61k", {}, "Donating $20 worth of Litecoin. Thank you for your support.", function(click_type) end)
