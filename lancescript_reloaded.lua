@@ -1,5 +1,5 @@
 -- LANCESCRIPT RELOADED
--- version 6.4.6, unless i forgot to update this line loll
+-- version 6.4.7, unless i forgot to update this line loll
 util.require_natives("1640181023")
 gta_labels = require('all_labels')
 all_labels = gta_labels.all_labels
