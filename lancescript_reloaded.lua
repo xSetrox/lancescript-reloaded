@@ -4051,6 +4051,7 @@ lancescript_credits = menu.list(lancescript_root, "Credits", {"lancescriptcredit
 menu.action(lancescript_credits, "Sainan", {}, "Donating $200 worth of crypto (top donor), helping with reverse engineering GTA V, developing Stand that makes Lancescript possible, and generally being a big help. Thanks for everything.", function(click_type) end)
 menu.action(lancescript_credits, "Catnip#0420", {}, "Donating a $50 Amazon gift card, thank you!", function(click_type) end)
 menu.action(lancescript_credits, "PANDA#4444", {}, "Donating a $25 Amazon gift card, thank you!", function(click_type) end)
+menu.action(lancescript_credits, "Prism#7717", {}, "Assisting with SE's", function(click_type) end)
 menu.action(lancescript_credits, "Millennium#0001", {}, "Sending a $10 fortnit- i mean amazon- gift card. Thanks!", function(click_type) end)
 menu.action(lancescript_credits, "61k", {}, "Donating $20 worth of Litecoin. Thank you for your support.", function(click_type) end)
 menu.action(lancescript_credits, "Y1tzy", {}, "One of the original donors. Thanks!", function(click_type) end)
