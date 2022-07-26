@@ -107,11 +107,11 @@ function get_stat_by_name(stat_name, character)
 end
 
 function get_prostitutes_solicited(pid)
-    return memory.read_int(memory.script_global(1853131 + 1 + (pid * 888) + 205 + 54))
+    return memory.read_int(memory.script_global(1853348 + 1 + (pid * 834) + 205 + 54))
 end
 
 function get_lapdances_amount(pid) 
-    return memory.read_int(memory.script_global(1853131 + 1 + (pid * 888) + 205 + 55))
+    return memory.read_int(memory.script_global(1853348 + 1 + (pid * 834) + 205 + 55))
 end
 
 ap_root = menu.list(online_root, "All players", {"lancescriptonline"}, "Players")
@@ -4066,6 +4066,7 @@ menu.action(lancescript_credits, "Sainan", {}, "Donating $200 worth of crypto (t
 menu.action(lancescript_credits, "Catnip#0420", {}, "Donating a $50 Amazon gift card, thank you!", function(click_type) end)
 menu.action(lancescript_credits, "PANDA#4444", {}, "Donating a $25 Amazon gift card, thank you!", function(click_type) end)
 menu.action(lancescript_credits, "Prism#7717", {}, "Assisting with SE's", function(click_type) end)
+menu.action(lancescript_credits, "Ayim#7708", {}, "Assistance with globals", function(click_type) end)
 menu.action(lancescript_credits, "Millennium#0001", {}, "Sending a $10 fortnit- i mean amazon- gift card. Thanks!", function(click_type) end)
 menu.action(lancescript_credits, "61k", {}, "Donating $20 worth of Litecoin. Thank you for your support.", function(click_type) end)
 menu.action(lancescript_credits, "Y1tzy", {}, "One of the original donors. Thanks!", function(click_type) end)
