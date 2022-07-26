@@ -1,5 +1,5 @@
 -- LANCESCRIPT RELOADED
--- version 6.4.7, unless i forgot to update this line loll
+-- version 6.5.7, unless i forgot to update this line loll
 util.require_natives("1640181023")
 gta_labels = require('all_labels')
 all_labels = gta_labels.all_labels
@@ -132,6 +132,11 @@ async_http.init("pastebin.com", "/raw/nrMdhHwE", function(result)
     menu.hyperlink(menu.my_root(), "Join Discord", result, "")
 end)
 async_http.dispatch()
+
+reap = false
+menu.toggle(entities_root, "Reaper mode", {"reapermode"}, "Reaper mode requests control of every entity every frame. This can be resource-intensive and glitchy as well as potentially alerting/annoying modders, but it can also make all entity-related options work a lot better since you will \"own\" them, at least for a while.", function(on)
+    reap = on
+end)
 
 -- entity-pool gathering handling
 vehicle_uses = 0
@@ -1275,6 +1280,9 @@ objects_thread = util.create_thread(function (thr)
             end
             all_objects = entities.get_all_objects_as_handles()
             for k,obj in pairs(all_objects) do
+                if reap then
+                    request_control_of_entity(obj)
+                end
                 --- PROJECTILE SHIT
                 if is_entity_a_projectile(ENTITY.GET_ENTITY_MODEL(obj)) then
                     if projectile_warn then
@@ -1348,6 +1356,10 @@ peds_thread = util.create_thread(function (thr)
                     end
                 end
                 if not PED.IS_PED_A_PLAYER(ped) then
+                    if reap then
+                        request_control_of_entity(ped)
+                    end
+
                     if ped_no_ragdoll then 
                         PED.SET_PED_CAN_RAGDOLL(ped, false)
                     end
@@ -1850,10 +1862,8 @@ vehicles_thread = util.create_thread(function (thr)
                 local driver = VEHICLE.GET_PED_IN_VEHICLE_SEAT(veh, -1)
                 -- FOR THINGS THAT SHOULD NOT WORK ON CARS WITH PLAYERS DRIVING THEM
                 if player_cur_car ~= veh and not (PED.IS_PED_A_PLAYER(driver) or driver == 0) then
-                    if not PED.IS_PED_A_PLAYER(driver) or driver == 0 then
-                        if reap then
-                            request_control_of_entity(veh)
-                        end
+                    if reap then
+                        request_control_of_entity(veh)
                     end
                     if inferno then
                         local coords = ENTITY.GET_ENTITY_COORDS(veh, true)
@@ -1918,6 +1928,10 @@ pickups_thread = util.create_thread(function(thr)
             ls_log("Pickups pool is being updated")
             all_pickups = entities.get_all_pickups_as_handles()
             for k,p in pairs(all_pickups) do
+                if reap then
+                    request_control_of_entity(p)
+                end
+
                 if tp_all_pickups then
                     local pos = ENTITY.GET_ENTITY_COORDS(tp_pickup_tar, true)
                     ENTITY.SET_ENTITY_COORDS_NO_OFFSET(p, pos['x'], pos['y'], pos['z'], true, false, false)
