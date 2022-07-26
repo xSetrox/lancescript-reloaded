@@ -1,5 +1,5 @@
 -- LANCESCRIPT RELOADED
--- version 6.4.5, unless i forgot to update this line loll
+-- version 6.4.6, unless i forgot to update this line loll
 util.require_natives("1640181023")
 gta_labels = require('all_labels')
 all_labels = gta_labels.all_labels
@@ -2826,7 +2826,7 @@ function send_attacker_squad(p_hash, v_hash, forcestayinv, godmodeatk, hp, weapo
 end
 
 function send_player_label_sms(label, pid)
-    local event_data = {-1702264142, players.user(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+    local event_data = {-791892894, players.user(), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
     local out = label:sub(1, 127)
     for i = 0, #out -1 do
         local slot = i // 8
