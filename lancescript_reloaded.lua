@@ -1,8 +1,7 @@
 -- LANCESCRIPT RELOADED
--- version 7.5.7, unless i forgot to update this line loll
+-- version 7.5.8, unless i forgot to update this line loll
 util.require_natives("1640181023")
 gta_labels = require('all_labels')
-local lunajson = require 'lunajson'
 all_labels = gta_labels.all_labels
 sexts = gta_labels.sexts
 ocoded_for = 1.61
