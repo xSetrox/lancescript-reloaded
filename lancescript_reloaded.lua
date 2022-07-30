@@ -1,5 +1,5 @@
 -- LANCESCRIPT RELOADED
--- version 7.5.8, unless i forgot to update this line loll
+script_version = 7.59
 util.require_natives("1640181023")
 gta_labels = require('all_labels')
 all_labels = gta_labels.all_labels
@@ -53,9 +53,25 @@ for i, path in ipairs(filesystem.list_files(translations_dir)) do
     end
 end
 
+local updated = false
+if not table.contains(translation_dir_files, 'last_version.txt') then 
+    updated = true
+    local file = io.open(translations_dir .. "/last_version.txt",'w')
+    file:write(script_version)
+    file:close()
+end
+
+-- get version from file
+local f = io.open(translations_dir .. "/last_version.txt",'r')
+version_from_file = f:read('a')
+f:close()
+if tonumber(version_from_file) < script_version then
+    updated = true
+end
+
 -- do not play with this unless you want shit breakin!
 local need_default_translation
-if not table.contains(translation_dir_files, 'english.lua') then 
+if not table.contains(translation_dir_files, 'english.lua') or updated then 
     need_default_translation = true
     async_http.init('gist.githubusercontent.com', '/xSetrox/013ad730bf38b9684151637356b1138c/raw/27db004cc338ac80d05a4c1341514b74518f52b7/english.lua', function(data)
         local file = io.open(translations_dir .. "/english.lua",'w')
@@ -1439,7 +1455,7 @@ peds_thread = util.create_thread(function (thr)
 
                     if hooker_esp then
                         local mdl = ENTITY.GET_ENTITY_MODEL(ped)
-                        if PED.GET_PED_TYPE(ped) == 5 then 
+                        if PED.IS_PED_USING_SCENARIO("WORLD_HUMAN_PROSTITUTE_HIGH_CLASS") or PED.IS_PED_USING_SCENARIO("WORLD_HUMAN_PROSTITUTE_LOW_CLASS") then 
                             util.draw_ar_beacon(ENTITY.GET_ENTITY_COORDS(ped))
                         end
                     end
