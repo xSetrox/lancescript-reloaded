@@ -1,5 +1,5 @@
 -- LANCESCRIPT RELOADED
-script_version = 7.59
+script_version = 7.60
 util.require_natives("1640181023")
 gta_labels = require('all_labels')
 all_labels = gta_labels.all_labels
@@ -66,6 +66,9 @@ local f = io.open(translations_dir .. "/last_version.txt",'r')
 version_from_file = f:read('a')
 f:close()
 if tonumber(version_from_file) < script_version then
+    local file = io.open(translations_dir .. "/last_version.txt",'w')
+    file:write(script_version)
+    file:close()
     updated = true
 end
 
