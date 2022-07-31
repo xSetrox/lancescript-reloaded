@@ -1,5 +1,5 @@
 -- LANCESCRIPT RELOADED
-script_version = 7.70
+script_version = 7.71
 util.require_natives("1640181023")
 gta_labels = require('all_labels')
 all_labels = gta_labels.all_labels
@@ -76,7 +76,7 @@ end
 local need_default_translation
 if not table.contains(translation_dir_files, 'english.lua') or updated then 
     need_default_translation = true
-    async_http.init('gist.githubusercontent.com', '/xSetrox/013ad730bf38b9684151637356b1138c/raw/27db004cc338ac80d05a4c1341514b74518f52b7/english.lua', function(data)
+    async_http.init('gist.githubusercontent.com', '/xSetrox/013ad730bf38b9684151637356b1138c/raw', function(data)
         local file = io.open(translations_dir .. "/english.lua",'w')
         file:write(data)
         file:close()
