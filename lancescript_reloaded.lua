@@ -1,5 +1,5 @@
 -- LANCESCRIPT RELOADED
-script_version = 7.60
+script_version = 7.70
 util.require_natives("1640181023")
 gta_labels = require('all_labels')
 all_labels = gta_labels.all_labels
@@ -1458,7 +1458,7 @@ peds_thread = util.create_thread(function (thr)
 
                     if hooker_esp then
                         local mdl = ENTITY.GET_ENTITY_MODEL(ped)
-                        if PED.IS_PED_USING_SCENARIO("WORLD_HUMAN_PROSTITUTE_HIGH_CLASS") or PED.IS_PED_USING_SCENARIO("WORLD_HUMAN_PROSTITUTE_LOW_CLASS") then 
+                        if PED.IS_PED_USING_SCENARIO(ped, "WORLD_HUMAN_PROSTITUTE_HIGH_CLASS") or PED.IS_PED_USING_SCENARIO(ped,"WORLD_HUMAN_PROSTITUTE_LOW_CLASS") then 
                             util.draw_ar_beacon(ENTITY.GET_ENTITY_COORDS(ped))
                         end
                     end
@@ -3240,7 +3240,7 @@ function set_up_player_actions(pid)
         NETWORK.REMOVE_ALL_STICKY_BOMBS_FROM_ENTITY(car)
     end)
 
-    crush_root = menu.list(ls_hostile, translations.crush_player, {translations.crush_player_cmd}, "")
+    crush_root = menu.list(ls_hostile, translations.crush_player, {translations.crush_player_root_cmd}, "")
 
     local custom_crush_model = "dump"
     menu.text_input(crush_root, translations.custom_crush_model, {translations.custom_crush_model_cmd}, translations.custom_crush_model_desc, function(on_input)
@@ -3704,7 +3704,29 @@ function set_up_player_actions(pid)
         local new_clone = PED.CLONE_PED(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid), true, true, true)
     end)
 
-
+    local custom_hooker_options = {translations.clone_player, translations.lester, translations.tracy}
+    menu.list_action(npctrolls_root, translations.send_custom_hooker, {translations.send_custom_hooker_cmd}, translations.send_custom_hooker_desc, custom_hooker_options, function(index, value, click_type)
+        local hooker
+        local c
+        pluto_switch index do
+            case 1:
+                hooker = PED.CLONE_PED(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid), true, true, true)
+                break
+            case 2:
+                c = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid), -5.0, 0.0, 0.0)
+                request_model_load(util.joaat('cs_lestercrest'))
+                hooker = entities.create_ped(28, util.joaat('cs_lestercrest'), c, math.random(270))
+                break
+            case 3:
+                c = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid), -5.0, 0.0, 0.0)
+                request_model_load(util.joaat('cs_tracydisanto'))
+                hooker = entities.create_ped(28, util.joaat('cs_tracydisanto'), c, math.random(270))
+                break
+        end
+        local c = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(PLAYER.GET_PLAYER_PED_SCRIPT_INDEX(pid), -5.0, 0.0, 0.0)
+        ENTITY.SET_ENTITY_COORDS(hooker, c.x, c.y, c.z)
+        TASK.TASK_START_SCENARIO_IN_PLACE(hooker, "WORLD_HUMAN_PROSTITUTE_HIGH_CLASS", 0, false)
+    end)
     --ba_prop_club_glass_trans
 
     menu.action(npctrolls_root, translations.npc_jack_last_car, {translations.npc_jack_last_car_cmd}, translations.npc_jack_last_car_desc, function(click_type)
