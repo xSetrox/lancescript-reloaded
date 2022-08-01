@@ -300,12 +300,57 @@ function request_game_script(str)
     end
 end
 
--- CREDIT TO NOWIRY
+
+---Credits to Nowiry
 local function get_entity_owner(entity)
 	local pEntity = entities.handle_to_pointer(entity)
 	local addr = memory.read_long(pEntity + 0xD0)
 	return (addr ~= 0) and memory.read_byte(addr + 0x49) or -1
 end
+
+
+function interpolate(y0, y1, perc)
+	perc = perc > 1.0 and 1.0 or perc
+	return (1 - perc) * y0 + perc * y1
+end
+
+
+function get_health_colour(perc)
+	local result = {a = 255}
+	local r, g, b
+	if perc <= 0.5 then
+		r = 1.0
+		g = interpolate(0.0, 1.0, perc/0.5)
+		b = 0.0
+	else
+		r = interpolate(1.0, 0, (perc - 0.5)/0.5)
+		g = 1.0
+		b = 0.0
+	end
+	result.r = math.ceil(r * 255)
+	result.g = math.ceil(g * 255)
+	result.b = math.ceil(b * 255)
+	return result
+end
+
+
+function draw_marker(type, pos, dir, rot, scale, rotate, colour, txdDict, txdName)
+    txdDict = txdDict or 0
+    txdName = txdName or 0
+    colour = colour or {r = 255, g = 255, b = 255, a = 255}
+    GRAPHICS.DRAW_MARKER(type, pos.x, pos.y, pos.z, dir.x, dir.y, dir.z, rot.x, rot.y, rot.z, scale.x, scale.y, scale.z, colour.r, colour.g, colour.b, colour.a, false, true, 2, rotate, txdDict, txdName, false)
+end
+
+
+function get_distance_between_entities(entity, target)
+	if not ENTITY.DOES_ENTITY_EXIST(entity) or not ENTITY.DOES_ENTITY_EXIST(target) then
+		return 0.0
+	end
+	local pos = ENTITY.GET_ENTITY_COORDS(entity, true)
+	return ENTITY.GET_ENTITY_COORDS(target, true):distance(pos)
+end
+
+
 
 function world_to_screen_coords(x, y, z)
     sc_x = memory.alloc(8)
@@ -1530,30 +1575,25 @@ peds_thread = util.create_thread(function (thr)
                         AUDIO.PLAY_PAIN(ped, 7, 0)
                     end
 
-                    if php_bars then
-                        local d_coord = ENTITY.GET_ENTITY_COORDS(ped, true)
-                        d_coord['z'] = d_coord['z'] + 0.8
-                        local hp = ENTITY.GET_ENTITY_HEALTH(ped)
-                        local perc = hp/ENTITY.GET_ENTITY_MAX_HEALTH(ped)*100
-                        if perc ~= 0 then
-                            local r = 0
-                            local g = 0
-                            local b = 0
-                            if perc == 100 then
-                                r = 0
-                                g = 255
-                                b = 0
-                            elseif perc < 100 and perc > 50 then
-                                r = 255
-                                g = 255
-                                b = 0
-                            else
-                                r = 255
-                                g = 0
-                                b = 0
-                            end
-                            GRAPHICS.DRAW_MARKER(43, d_coord['x'], d_coord['y'], d_coord['z'], 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.10, 0, perc/150, r, g, b, 100, false, true, 2, false, 0, 0, false)
+
+                    if php_bars and get_distance_between_entities(players.user_ped(), ped) < 100.0 and
+                    not PED.IS_PED_FATALLY_INJURED(ped) and ENTITY.IS_ENTITY_ON_SCREEN(ped) then
+                        local headPos = PED.GET_PED_BONE_COORDS(ped, 0x322C --[[head]], 0.35, 0., 0.)
+                        local perc = 0.0
+
+                        if not PED.IS_PED_FATALLY_INJURED(ped) then
+                            local maxHealth = PED.GET_PED_MAX_HEALTH(ped)
+                            local health = ENTITY.GET_ENTITY_HEALTH(ped)
+                            ---Peds die when their health is below the injured threshold
+                            ---which is 100 by default, so we subtract it here so the perc is
+                            ---zero when a ped dies.
+                            perc = (health - 100.0) / (maxHealth - 100.0)
+                            if perc > 1.0 then perc = 1.0  end
                         end
+                        
+                        local colour = get_health_colour(perc)
+                        local scale = v3.new(0.10, 0.0, interpolate(0.0, 0.7, perc))
+                        draw_marker(43, headPos, v3(), v3(), scale, false, colour, 0, 0)
                     end
 
                     if allpeds_gun ~= 0 then
@@ -1959,6 +1999,8 @@ menu.toggle(v_traffic_root, translations.reverse_traffic, {translations.reverse_
     mod_uses("vehicle", if on then 1 else -1)
 end)
 
+---Nowiry: This thread is causing a huge fps drop, around 30% in my machine (not matter the option you enable),
+---Getting the driver of every single vehicle on tick seems to be the problem
 vehicles_thread = util.create_thread(function (thr)
     while true do
         if vehicle_uses > 0 then
@@ -1971,34 +2013,35 @@ vehicles_thread = util.create_thread(function (thr)
                         entities.delete(veh)
                     end
                 end
-                if vhp_bars then
-                    local d_coord = ENTITY.GET_ENTITY_COORDS(veh, true)
-                    d_coord['z'] = d_coord['z'] + 1.0
-                    local hp = ENTITY.GET_ENTITY_HEALTH(veh)
-                    local perc = hp/ENTITY.GET_ENTITY_MAX_HEALTH(veh)*100
-                    if perc ~= 0 then
-                        local r = 0
-                        local g = 0
-                        local b = 0
-                        if perc == 100 then
-                            r = 0
-                            g = 255
-                            b = 0
-                        elseif perc < 100 and perc > 50 then
-                            r = 255
-                            g = 255
-                            b = 0
-                        else
-                            r = 255
-                            g = 0
-                            b = 0
-                        end
-                        GRAPHICS.DRAW_MARKER(43, d_coord['x'], d_coord['y'], d_coord['z'], 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.50, 0, perc/150, r, g, b, 100, false, true, 2, false, 0, 0, false)
+
+                ---Also making sure the vehicle is on screen and nearby the user ped, the idea is not to
+                ---draw unnecessary markers and prevent a significant fps drop (as experienced)
+                if vhp_bars and get_distance_between_entities(players.user_ped(), veh) < 200.0 and
+                not ENTITY.IS_ENTITY_DEAD(veh, false) and ENTITY.IS_ENTITY_ON_SCREEN(veh) then
+                    local modelHash = ENTITY.GET_ENTITY_MODEL(veh)
+                    local min, max = v3.new(), v3.new()
+                    MISC.GET_MODEL_DIMENSIONS(modelHash, min, max)
+                    local pos = ENTITY.GET_OFFSET_FROM_ENTITY_IN_WORLD_COORDS(veh, 0.0, 0.0, max.z + 0.3)
+                    local perc = 0.0
+
+                    if not ENTITY.IS_ENTITY_DEAD(veh, false) then
+                        local maxHealth = ENTITY.GET_ENTITY_MAX_HEALTH(veh)
+                        local health = ENTITY.GET_ENTITY_HEALTH(veh)
+                        perc = health / maxHealth
+                        if perc > 1.0 then perc = 1.0  end
                     end
+                    
+                    local colour = get_health_colour(perc)
+                    local scale = v3.new(0.10, 0.0, interpolate(0.0, 0.7, perc))
+                    draw_marker(43, pos, v3(), v3(), scale, false, colour, 0, 0)
                 end
+
                 local driver = VEHICLE.GET_PED_IN_VEHICLE_SEAT(veh, -1)
                 -- FOR THINGS THAT SHOULD NOT WORK ON CARS WITH PLAYERS DRIVING THEM
                 if player_cur_car ~= veh and not (PED.IS_PED_A_PLAYER(driver) or driver == 0) then
+                    
+                    ---You're stopping the execution of this thread for five seconds or maybe less if you got control of the vehicle,
+                    ---for every vehicle, on tick! Intead you should use a non-loop-based control request like request_control_once
                     if reap then
                         request_control_of_entity(veh)
                     end
